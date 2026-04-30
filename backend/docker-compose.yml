@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: evento_backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    environment:
+      # Override MONGO_URI to point to the local Docker container instead of Atlas
+      - MONGO_URI=mongodb://mongodb:27017/evento
+    # Optional: Un-comment the next two lines for hot-reloading in dev (requires dev dependencies though)
+    # volumes:
+    #   - ./src:/app/src
+
+  mongodb:
+    image: mongo:latest
+    container_name: evento_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # Stripe CLI for forwarding webhooks to your local app
+  stripe-cli:
+    image: stripe/stripe-cli
+    container_name: evento_stripe_cli
+    command: listen --forward-to http://app:5000/api/v1/bookings/webhook
+    environment:
+      # Requires STRIPE_SECRET_KEY to be present in your .env file
+      - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
+    depends_on:
+      - app
+
+volumes:
+  mongodb_data:

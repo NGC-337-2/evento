@@ -2,11 +2,26 @@ import axios from 'axios';
 
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
-  withCredentials: true, // Send cookies with requests
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Request interceptor to attach token
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('evento_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 
 // Response interceptor to handle token expiration/refresh (stub for now)
 axiosClient.interceptors.response.use(

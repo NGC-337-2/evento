@@ -1,38 +1,33 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import EventForm from '../components/EventForm';
-import axiosClient from '../api/axiosClient';
+import { createEvent, resetEventsState } from '../features/events/eventsSlice';
 import { toast } from 'react-toastify';
 
 const CreateEventPage = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
+  
   const { user } = useSelector(state => state.auth);
+  const { isLoading, isSuccess, isError, message, event } = useSelector(state => state.events);
 
-  // Note: Only organisers and admins can create events. 
-  // ProtectedRoute will handle basic auth bounce, but we can add extra UI safety here.
+  useEffect(() => {
+      if (isError) {
+          toast.error(message);
+          dispatch(resetEventsState());
+      }
+      if (isSuccess && event) {
+          toast.success('Event created successfully!');
+          navigate(`/event/${event._id}`);
+          dispatch(resetEventsState());
+      }
+  }, [isSuccess, isError, message, event, navigate, dispatch]);
 
-  const handleSubmit = async (formData) => {
-    setIsLoading(true);
-    try {
-      // Need to use multipart/form-data for file uploads
-      const res = await axiosClient.post('/events', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      toast.success('Event created successfully!');
-      // Navigate to the newly created event or to dashboard
-      navigate(`/event/${res.data.data._id}`);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create event');
-      console.error("Create event error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSubmit = (formData) => {
+    dispatch(createEvent(formData));
   };
+
 
   if (!user || (user.role !== 'organiser' && user.role !== 'admin')) {
     return (

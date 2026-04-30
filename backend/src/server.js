@@ -7,6 +7,7 @@
 require('dotenv').config();
 require('express-async-errors');
 
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -18,7 +19,7 @@ const compression = require('compression');
 const hpp = require('hpp');
 const { v4: uuidv4 } = require('uuid');
 
-const connectDB = require('./config/db');
+const { connectDB } = require('./config/db');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const logger = require('./config/logger');
 const { getDbStatus } = require('./config/db'); // From improved connectDB module
@@ -148,7 +149,7 @@ app.use(express.urlencoded({
 }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(mongoSanitize({ replaceWith: '_' }));
-app.use(require('xss-clean')());
+
 
 // ─── Performance & Reliability ───────────────────────────────────────────────
 app.use(compression({ level: 6, threshold: '1kb' }));
@@ -175,13 +176,14 @@ if (process.env.NODE_ENV === 'development') {
   // Structured JSON logging for production
   app.use(morgan('combined', {
     stream: {
-      write: (message) => {
-        const parsed = morgan.compile('combined')(message);
-        logger.info('HTTP Request', { ...parsed, requestId: message.id });
-      }
+      write: (message) => logger.info('HTTP Request', {
+        raw: message.trim(),
+        requestId: 'N/A' 
+      })
     }
   }));
 }
+
 
 // ─── Enhanced Health Check ───────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
@@ -243,7 +245,7 @@ const startServer = async () => {
     await connectDB();
     configureCloudinary();
 
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 EventO API server running in ${process.env.NODE_ENV} mode`, {
         port: PORT,
         pid: process.pid,

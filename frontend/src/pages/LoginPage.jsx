@@ -1,6 +1,64 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { toast } from 'react-toastify';
+import { login, reset } from '../features/auth/authSlice';
+import Spinner from '../components/Spinner';
 
 const LoginPage = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const { email, password } = formData;
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const { user, isLoading, isError, isSuccess, message } = useSelector(
+    (state) => state.auth
+  );
+
+  useEffect(() => {
+    if (isError) {
+      toast.error(message);
+    }
+
+    if (isSuccess || user) {
+      navigate('/dashboard');
+    }
+
+    dispatch(reset());
+  }, [user, isError, isSuccess, message, navigate, dispatch]);
+
+  const onChange = (e) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      [e.target.id]: e.target.value,
+    }));
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      toast.error('Please provide both email and password');
+      return;
+    }
+
+    const userData = {
+      email,
+      password,
+    };
+
+    dispatch(login(userData));
+  };
+
+  if (isLoading) {
+    return <Spinner />;
+  }
+
   return (
     <div className="container mx-auto px-4 py-12 flex-grow flex items-center justify-center">
       <div className="card w-full max-w-md p-8 dark:bg-secondary-800 dark:border-secondary-700">
@@ -9,15 +67,20 @@ const LoginPage = () => {
           <p className="text-sm text-secondary-500 dark:text-secondary-400 mt-2">Enter your credentials to access your account</p>
         </div>
         
-        <form className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1" htmlFor="email">Email</label>
             <input 
               id="email" 
               type="email" 
+              autoComplete="email"
               className="input-field dark:bg-secondary-900 dark:border-secondary-700 dark:text-white" 
-              placeholder="you@example.com" 
+              placeholder="you@example.com"
+              value={email}
+              onChange={onChange}
+              required
             />
+
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -27,13 +90,18 @@ const LoginPage = () => {
             <input 
               id="password" 
               type="password" 
+              autoComplete="current-password"
               className="input-field dark:bg-secondary-900 dark:border-secondary-700 dark:text-white" 
-              placeholder="••••••••" 
+              placeholder="••••••••"
+              value={password}
+              onChange={onChange}
+              required
             />
+
           </div>
           
-          <button type="submit" className="btn btn-primary w-full h-10 mt-6">
-            Log In
+          <button type="submit" className="btn btn-primary w-full h-10 mt-6" disabled={isLoading}>
+            {isLoading ? 'Logging In...' : 'Log In'}
           </button>
         </form>
         
@@ -46,3 +114,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

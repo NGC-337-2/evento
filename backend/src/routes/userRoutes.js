@@ -1,23 +1,38 @@
+// src/routes/userRoutes.js
 const express = require('express');
-const { protect, authorize } = require('../middleware/auth');
-const { ROLES } = require('../config/constants');
 const router = express.Router();
 
-// Setup protection for all user routes
-router.use(protect);
+// Controller & Middleware Imports
+const userController = require('../controllers/userController');
+const { protect, authorize } = require('../middleware/auth');
 
-// @desc    Get all users (Admin only stub)
-// @route   GET /api/v1/users
-// @access  Private/Admin
-router.get('/', authorize(ROLES.ADMIN), (req, res) => {
-  res.status(200).json({ success: true, message: 'Get all users stub' });
-});
+// ─── Protected Routes (Requires Authentication) ───────────────────────────────
 
-// @desc    Get user by ID
 // @route   GET /api/v1/users/:id
+// @desc    Get user profile by ID (Admin or self)
+// @access  Private
+router.get('/:id', protect, userController.getUserById);
+
+// @route   PUT /api/v1/users/:id
+// @desc    Update user profile details
+// @access  Private
+router.put('/:id', protect, userController.updateUser);
+
+// @route   PUT /api/v1/users/:id/password
+// @desc    Update user password
+// @access  Private
+router.put('/:id/password', protect, userController.updatePassword);
+
+// @route   DELETE /api/v1/users/:id
+// @desc    Delete user account (Admin or self)
+// @access  Private
+router.delete('/:id', protect, userController.deleteUser);
+
+// ─── Admin-Only Routes ────────────────────────────────────────────────────────
+
+// @route   GET /api/v1/users
+// @desc    Get all users (Admin only)
 // @access  Private/Admin
-router.get('/:id', authorize(ROLES.ADMIN), (req, res) => {
-  res.status(200).json({ success: true, message: `Get user ${req.params.id} stub` });
-});
+router.get('/', protect, authorize('admin'), userController.getAllUsers);
 
 module.exports = router;

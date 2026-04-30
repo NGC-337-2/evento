@@ -1,102 +1,107 @@
+// src/models/Event.js
 const mongoose = require('mongoose');
-const { EVENT_STATUS, EVENT_CATEGORIES, TICKET_TIER } = require('../config/constants');
+const { EVENT_STATUS } = require('../config/constants');
 
-const ticketTierSchema = new mongoose.Schema({
-  name: {
+const eventSchema = new mongoose.Schema({
+  title: {
     type: String,
-    enum: Object.values(TICKET_TIER),
-    required: true,
+    required: [true, 'Event title is required'],
+    trim: true,
+    maxlength: [100, 'Title cannot exceed 100 characters']
   },
-  price: {
-    type: Number,
-    required: true,
-    min: 0,
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
+  date: {
+    type: Date,
+    required: [true, 'Event date is required'],
+    validate: {
+      validator: function(v) {
+        return v >= new Date(); // Must be today or in the future
+      },
+      message: 'Event date must be in the future or today'
+    }
+  },
+  location: {
+    venue: { type: String, required: [true, 'Venue is required'] },
+    address: String,
+    city: String,
+    state: String,
+    country: String,
+    coordinates: {
+      lat: Number,
+      lng: Number
+    }
+  },
+  category: {
+    type: String,
+    enum: ['conference', 'workshop', 'concert', 'seminar', 'social', 'sports', 'other'],
+    required: [true, 'Category is required']
+  },
+  organizer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Organizer reference is required']
+  },
+  ticketTiers: [{
+    name: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    capacity: { type: Number, required: true, min: 1 },
+    sold: { type: Number, default: 0 }
+  }],
   capacity: {
     type: Number,
-    required: true,
-    min: 1,
+    required: [true, 'Total capacity is required'],
+    min: [1, 'Capacity must be at least 1']
   },
-  sold: {
+  bookingsCount: {
     type: Number,
     default: 0,
+    min: [0, 'Bookings cannot be negative']
   },
+
+  status: {
+    type: String,
+    enum: Object.values(EVENT_STATUS),
+    default: EVENT_STATUS.DRAFT
+  },
+  image: {
+    type: String, // URL from Cloudinary
+    default: null
+  },
+  tags: [{ type: String, trim: true }],
+  isFeatured: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-const eventSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: [true, 'Please add an event title'],
-      trim: true,
-      maxlength: [100, 'Title cannot be more than 100 characters'],
-    },
-    description: {
-      type: String,
-      required: [true, 'Please add a description'],
-      maxlength: [2000, 'Description cannot be more than 2000 characters'],
-    },
-    category: {
-      type: String,
-      required: [true, 'Please select a category'],
-      enum: EVENT_CATEGORIES,
-    },
-    location: {
-      address: {
-        type: String,
-        required: [true, 'Please add an address'],
-      },
-      city: String,
-      country: String,
-      coordinates: {
-        type: [Number], // longitude, latitude
-        index: '2dsphere',
-      },
-    },
-    date: {
-      start: {
-        type: Date,
-        required: [true, 'Please add a start date'],
-      },
-      end: {
-        type: Date,
-        required: [true, 'Please add an end date'],
-      },
-    },
-    organiser: {
-      type: mongoose.Schema.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    ticketTiers: [ticketTierSchema],
-    totalCapacity: {
-      type: Number,
-      required: true,
-    },
-    totalSold: {
-      type: Number,
-      default: 0,
-    },
-    status: {
-      type: String,
-      enum: Object.values(EVENT_STATUS),
-      default: EVENT_STATUS.DRAFT,
-    },
-    image: {
-      type: String,
-      default: 'no-photo.jpg',
-    },
-  },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+// 📍 Indexes for performance
+eventSchema.index({ date: 1, status: 1 });
+eventSchema.index({ organizer: 1 });
+eventSchema.index({ category: 1, status: 1 });
+eventSchema.index({ title: 'text', description: 'text' }); // Full-text search
 
-eventSchema.index({ status: 1 });
-eventSchema.index({ 'date.start': 1 });
+// 🎫 Virtual: Calculate available slots
+eventSchema.virtual('availableSlots').get(function() {
+  return Math.max(0, this.capacity - this.bookingsCount);
+});
+
+// 🔒 Method: Check if event is sold out
+eventSchema.methods.isFull = function() {
+  return this.bookingsCount >= this.capacity;
+};
+
+// 📅 Method: Check if event is active/published
+eventSchema.methods.isActive = function() {
+  return [EVENT_STATUS.PUBLISHED, EVENT_STATUS.ONGOING].includes(this.status);
+};
 
 const Event = mongoose.model('Event', eventSchema);
-
 module.exports = Event;

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../features/auth/authSlice';
 import { toggleTheme } from '../features/ui/uiSlice';
@@ -8,10 +8,13 @@ const Header = () => {
   const { user } = useSelector((state) => state.auth);
   const { theme } = useSelector((state) => state.ui);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     dispatch(logout());
+    navigate('/login');
   };
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-secondary-200 bg-white/80 backdrop-blur-md dark:bg-secondary-900/80 dark:border-secondary-800">

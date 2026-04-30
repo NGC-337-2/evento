@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { EVENT_CATEGORIES, EVENT_STATUS } from '../../../backend/src/config/constants'; // Reusing from backend constants if possible, or redefine
 import { MapPin, Calendar as CalendarIcon, Upload, Trash2, Plus } from 'lucide-react';
 import { toast } from 'react-toastify';
+
 
 const FRONTEND_CATEGORIES = [
   'music', 'sports', 'technology', 'arts', 'business', 'food', 

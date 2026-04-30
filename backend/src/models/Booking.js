@@ -1,75 +1,108 @@
+// src/models/Booking.js
 const mongoose = require('mongoose');
 const { BOOKING_STATUS } = require('../config/constants');
 
-const bookingTicketSchema = new mongoose.Schema({
-  tierId: {
-    type: mongoose.Schema.ObjectId,
-    required: true,
+const bookingSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User reference is required']
   },
-  tierName: {
+  event: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Event',
+    required: [true, 'Event reference is required']
+  },
+  status: {
     type: String,
-    required: true,
+    enum: Object.values(BOOKING_STATUS),
+    default: BOOKING_STATUS.PENDING
   },
   quantity: {
     type: Number,
-    required: true,
-    min: 1,
+    required: [true, 'Ticket quantity is required'],
+    min: [1, 'Quantity must be at least 1']
   },
-  pricePerTicket: {
+  tickets: [{
+    tierId: { type: mongoose.Schema.Types.ObjectId },
+    tierName: String,
+    quantity: { type: Number, required: true },
+    pricePerTicket: { type: Number, required: true }
+  }],
+
+  totalPrice: {
     type: Number,
-    required: true,
+    required: [true, 'Total price is required'],
+    min: [0, 'Price cannot be negative']
   },
+  currency: {
+    type: String,
+    default: 'USD',
+    uppercase: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  paymentIntentId: {
+    type: String, // Stripe Payment Intent ID
+    default: null
+  },
+  ticketCodes: [{
+    type: String,
+    unique: true
+  }],
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Notes cannot exceed 500 characters']
+  },
+  cancelledAt: {
+    type: Date,
+    default: null
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-const bookingSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    event: {
-      type: mongoose.Schema.ObjectId,
-      ref: 'Event',
-      required: true,
-    },
-    tickets: [bookingTicketSchema],
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
-    currency: {
-      type: String,
-      default: 'USD',
-    },
-    status: {
-      type: String,
-      enum: Object.values(BOOKING_STATUS),
-      default: BOOKING_STATUS.PENDING,
-    },
-    paymentIntentId: {
-      type: String,
-    },
-    qrCode: {
-      type: String, // String representation of QR code or URL to image
-    },
-    checkInStatus: {
-      type: Boolean,
-      default: false,
-    },
-    checkInTime: {
-      type: Date,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-// Compound index to quickly find a user's bookings for an event
+// 🔍 Indexes for query performance
 bookingSchema.index({ user: 1, event: 1 });
+bookingSchema.index({ paymentStatus: 1 });
 bookingSchema.index({ status: 1 });
+bookingSchema.index({ createdAt: -1 });
+
+// 🎟️ Virtual: Format booking date
+bookingSchema.virtual('createdAtFormatted').get(function () {
+  return this.createdAt.toLocaleString();
+});
+
+// 🎫 Method: Generate unique ticket codes
+bookingSchema.methods.generateTicketCodes = function () {
+  const codes = [];
+  const shortId = this._id.toString().slice(-8).toUpperCase();
+
+  for (let i = 0; i < this.quantity; i++) {
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    codes.push(`EVT-${shortId}-${randomPart}`);
+  }
+
+  this.ticketCodes = codes;
+  return codes;
+};
+
+// ✅ Method: Check if booking can be cancelled
+bookingSchema.methods.canBeCancelled = function () {
+  return [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED].includes(this.status) &&
+    this.paymentStatus === 'completed';
+};
 
 const Booking = mongoose.model('Booking', bookingSchema);
-
 module.exports = Booking;

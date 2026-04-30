@@ -1,41 +1,35 @@
-import { useEffect, useState } from 'react';
-import axiosClient from '../api/axiosClient';
+import { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { getMyBookings, cancelBooking, resetBookingState } from '../features/bookings/bookingSlice';
 import { format } from 'date-fns';
 import { Ticket, Calendar, MapPin, XCircle, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import Spinner from './Spinner';
 
 const AttendeeDashboard = () => {
-    const [bookings, setBookings] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const fetchBookings = async () => {
-        setIsLoading(true);
-        try {
-            const res = await axiosClient.get('/bookings/my-bookings');
-            setBookings(res.data.data);
-        } catch (err) {
-            toast.error("Failed to fetch bookings");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const dispatch = useDispatch();
+    const { bookings, isLoading, isError, message } = useSelector((state) => state.bookings);
 
     useEffect(() => {
-        fetchBookings();
-    }, []);
-
-    const handleCancel = async (id) => {
-        if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+        dispatch(getMyBookings());
         
-        try {
-            await axiosClient.put(`/bookings/${id}/cancel`);
-            toast.success("Booking cancelled successfully");
-            fetchBookings();
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Cancellation failed");
+        return () => {
+            dispatch(resetBookingState());
+        };
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (isError) {
+            toast.error(message || "Failed to fetch bookings");
         }
+    }, [isError, message]);
+
+    const handleCancel = (id) => {
+        if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+        dispatch(cancelBooking(id));
     };
+
 
     if (isLoading) return <div className="animate-pulse space-y-4">{[1,2,3].map(i => <div key={i} className="h-32 bg-secondary-100 dark:bg-secondary-800 rounded-xl"></div>)}</div>;
 
@@ -71,11 +65,12 @@ const AttendeeDashboard = () => {
                                 </div>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-secondary-500 dark:text-secondary-400">
-                                    <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {format(new Date(booking.event.date.start), 'PPP p')}</div>
-                                    <div className="flex items-center gap-1.5 truncate"><MapPin className="w-4 h-4" /> {booking.event.location.city}</div>
-                                    <div className="flex items-center gap-1.5"><Ticket className="w-4 h-4" /> {booking.tickets.reduce((a, b) => a + b.quantity, 0)} Ticket(s)</div>
-                                    <div className="font-bold text-secondary-900 dark:text-secondary-100">Total: ${booking.totalAmount.toFixed(2)}</div>
+                                    <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {booking.event?.date ? format(new Date(booking.event.date), 'PPP p') : 'No Date'}</div>
+                                    <div className="flex items-center gap-1.5 truncate"><MapPin className="w-4 h-4" /> {booking.event?.location?.city || 'Location TBD'}</div>
+                                    <div className="flex items-center gap-1.5"><Ticket className="w-4 h-4" /> {booking.quantity} Ticket(s)</div>
+                                    <div className="font-bold text-secondary-900 dark:text-secondary-100">Total: ${booking.totalPrice?.toFixed(2) || '0.00'}</div>
                                 </div>
+
                             </div>
 
                             <div className="flex flex-row md:flex-col gap-2 shrink-0 md:justify-center">

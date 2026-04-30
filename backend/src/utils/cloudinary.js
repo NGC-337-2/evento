@@ -1,44 +1,53 @@
+// src/utils/cloudinary.js
 const { v2: cloudinary } = require('cloudinary');
 const multer = require('multer');
 const logger = require('../config/logger');
 
-// 1. Configure Cloudinary v2
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+// 🌐 Initialize Cloudinary configuration
+const configureCloudinary = () => {
+  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
+  
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    throw new Error('❌ Missing required Cloudinary environment variables');
+  }
 
-// 2. Configure Multer to store files in memory (buffer)
+  cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+  logger.info('✅ Cloudinary configured successfully');
+};
+
+// 📦 Multer setup for in-memory storage (buffers files before Cloudinary upload)
 const storage = multer.memoryStorage();
-
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
-    cb(new Error('Not an image! Please upload only images.'), false);
+    cb(new Error('Invalid file type. Only images are allowed.'), false);
   }
 };
 
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  storage,
+  fileFilter,
+  limits: { fileSize: parseInt(process.env.MAX_IMAGE_SIZE) || 5 * 1024 * 1024 }, // 5MB default
 });
 
-// 3. Helper function to upload buffer to Cloudinary v2
+// ☁️ Upload buffer to Cloudinary with transformations
 const uploadToCloudinary = (fileBuffer, folder = 'evento') => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: folder,
+        folder,
         resource_type: 'auto',
-        transformation: [{ width: 1280, height: 720, crop: 'limit' }],
+        transformation: [{ width: 1280, height: 720, crop: 'limit', quality: 'auto' }],
       },
       (error, result) => {
         if (error) {
-          logger.error('Cloudinary upload error:', error);
+          logger.error('❌ Cloudinary upload failed', error);
           reject(error);
         } else {
           resolve(result);
@@ -49,8 +58,4 @@ const uploadToCloudinary = (fileBuffer, folder = 'evento') => {
   });
 };
 
-module.exports = {
-  upload, // Use as middleware: upload.single('image')
-  uploadToCloudinary, // Use in controller: await uploadToCloudinary(req.file.buffer)
-  cloudinary,
-};
+module.exports = { configureCloudinary, upload, uploadToCloudinary, cloudinary };

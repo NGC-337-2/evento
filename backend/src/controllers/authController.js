@@ -1,169 +1,181 @@
+// src/controllers/authController.js
+const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
-const { signToken, signRefreshToken, verifyRefreshToken } = require('../services/jwtService');
-const { JWT } = require('../config/constants');
+const emailService = require('../services/emailService');
 const logger = require('../config/logger');
+const { JWT_SECRET, JWT_EXPIRES_IN = '7d', CLIENT_URL } = process.env;
 
-// Generate JWT tokens and set cookie
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = signToken(user._id);
-  const refreshToken = signRefreshToken(user._id);
+// 🔑 Helper: Generate JWT
+const signToken = (id) => jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-  // Save refresh token to user
-  user.refreshToken = refreshToken;
-  user.save({ validateBeforeSave: false });
-
-  const cookieOptions = {
-    expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  };
-
-  res
-    .status(statusCode)
-    .cookie('token', token, cookieOptions)
-    .json({
-      success: true,
-      token,
-      refreshToken,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-      },
-    });
-};
-
-// @desc    Register user
+// @desc    Register new user
 // @route   POST /api/v1/auth/register
 // @access  Public
-const register = async (req, res) => {
+exports.register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  // Check if user exists
-  const userExists = await User.findOne({ email });
-
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    const err = new Error('User with this email already exists');
+    err.statusCode = 409;
+    throw err;
   }
 
-  // Create user
-  const user = await User.create({
-    name,
-    email,
+  // Generate verification token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+  const user = await User.create({ 
+    name, 
+    email, 
     password,
-    role, // In production, restrict assigning 'admin' role
+    role,
+    isVerified: process.env.NODE_ENV === 'development', // Auto-verify in dev
+    verificationToken: hashedVerificationToken,
+    verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
   });
 
-  sendTokenResponse(user, 201, res);
+  // Send verification email (don't await to avoid slowing down registration)
+  if (process.env.NODE_ENV !== 'development') {
+    emailService.sendVerificationEmail(user.email, verificationToken)
+      .catch(err => logger.error('Failed to send verification email', err));
+  }
+
+  const token = signToken(user._id);
+
+  res.status(201).json({
+    success: true,
+    message: 'Registration successful. Please verify your email.',
+    data: { user, token }
+  });
 };
 
-// @desc    Login user
+// @desc    Authenticate user & return JWT
 // @route   POST /api/v1/auth/login
 // @access  Public
-const login = async (req, res) => {
+exports.login = async (req, res) => {
   const { email, password } = req.body;
 
-  // Validate email & password
-  if (!email || !password) {
-    res.status(400);
-    throw new Error('Please provide an email and password');
-  }
-
-  // Check for user
   const user = await User.findOne({ email }).select('+password');
-
-  if (!user) {
-    res.status(401);
-    throw new Error('Invalid credentials');
+  if (!user || !(await user.comparePassword(password))) {
+    const err = new Error('Invalid email or password');
+    err.statusCode = 401;
+    throw err;
   }
 
-  // Check if password matches
-  const isMatch = await user.matchPassword(password);
-
-  if (!isMatch) {
-    res.status(401);
-    throw new Error('Invalid credentials');
+  if (!user.isVerified) {
+    const err = new Error('Please verify your email before logging in');
+    err.statusCode = 403;
+    throw err;
   }
 
-  sendTokenResponse(user, 200, res);
-};
-
-// @desc    Log user out / clear cookie
-// @route   POST /api/v1/auth/logout
-// @access  Private
-const logout = async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (user) {
-    user.refreshToken = undefined;
-    await user.save({ validateBeforeSave: false });
-  }
-
-  res.cookie('token', 'none', {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true,
-  });
+  const token = signToken(user._id);
 
   res.status(200).json({
     success: true,
-    data: {},
+    message: 'Login successful',
+    data: { user, token }
   });
 };
 
-// @desc    Get current logged in user
+// @desc    Get current logged-in user profile
 // @route   GET /api/v1/auth/me
 // @access  Private
-const getMe = async (req, res) => {
+exports.getMe = async (req, res) => {
   const user = await User.findById(req.user.id);
+  res.status(200).json({ success: true, data: user });
+};
+
+// @desc    Verify user email address
+// @route   POST /api/v1/auth/verify-email
+// @access  Public
+exports.verifyEmail = async (req, res) => {
+  const { email, token } = req.body;
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    email,
+    verificationToken: hashedToken,
+    verificationTokenExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    const err = new Error('Invalid or expired verification token');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  user.isVerified = true;
+  user.verificationToken = undefined;
+  user.verificationTokenExpires = undefined;
+  await user.save();
 
   res.status(200).json({
     success: true,
-    user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-    },
+    message: 'Email verified successfully',
+    data: { token: signToken(user._id) }
   });
 };
 
-// @desc    Refresh Token
-// @route   POST /api/v1/auth/refresh
+// @desc    Request password reset
+// @route   POST /api/v1/auth/forgot-password
 // @access  Public
-const refreshToken = async (req, res) => {
-  const { token } = req.body;
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
 
-  if (!token) {
-    res.status(401);
-    throw new Error('No refresh token provided');
+  // Security: Always return 200 to prevent email enumeration
+  if (!user) {
+    return res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a reset link has been sent.'
+    });
   }
 
-  const decoded = verifyRefreshToken(token);
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  await user.save();
 
-  if (!decoded) {
-    res.status(401);
-    throw new Error('Invalid or expired refresh token');
-  }
+  const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 
-  const user = await User.findById(decoded.id).select('+refreshToken');
+  emailService.sendPasswordResetEmail(user.email, resetUrl)
+    .catch(err => logger.error('Failed to send password reset email', err));
 
-  if (!user || user.refreshToken !== token) {
-     res.status(401);
-     throw new Error('Invalid refresh token');
-  }
-
-  sendTokenResponse(user, 200, res);
+  res.status(200).json({
+    success: true,
+    message: 'Password reset instructions sent.',
+    data: { resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined }
+  });
 };
 
-module.exports = {
-  register,
-  login,
-  logout,
-  getMe,
-  refreshToken,
+
+// @desc    Reset password using token
+// @route   PUT /api/v1/auth/reset-password/:token
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    const err = new Error('Invalid or expired reset token');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  user.password = req.body.password; // Model pre-save hook will hash it
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Password reset successful. You can now log in.',
+    data: { token: signToken(user._id) }
+  });
 };

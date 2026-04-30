@@ -3,32 +3,37 @@ const QRCode = require('qrcode');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const { BOOKING_STATUS, EVENT_STATUS } = require('../config/constants');
-const { sendBookingConfirmation } = require('../services/emailService');
+const { sendBookingConfirmation, sendBookingCancellation } = require('../services/emailService');
+const logger = require('../config/logger');
 
 // @desc    Create new booking checkout session
 // @route   POST /api/v1/bookings
-// @access  Private/Attendee
-const createBooking = async (req, res) => {
-  const { eventId, tickets } = req.body; // tickets: [{ tierId, quantity }]
+// @access  Private
+exports.createBooking = async (req, res) => {
+  const { eventId, tickets, notes } = req.body; // tickets: [{ tierId, quantity }]
 
   if (!tickets || tickets.length === 0) {
-    res.status(400);
-    throw new Error('No tickets requested');
+    const err = new Error('No tickets requested');
+    err.statusCode = 400;
+    throw err;
   }
 
   // Find event and check capacity
   const event = await Event.findById(eventId);
   if (!event) {
-    res.status(404);
-    throw new Error('Event not found');
+    const err = new Error('Event not found');
+    err.statusCode = 404;
+    throw err;
   }
 
   if (event.status !== EVENT_STATUS.PUBLISHED) {
-     res.status(400);
-     throw new Error('Event is not open for booking');
+     const err = new Error('Event is not open for booking');
+     err.statusCode = 400;
+     throw err;
   }
 
-  let totalAmount = 0;
+  let totalPrice = 0;
+  let totalQuantity = 0;
   const bookingTickets = [];
   const lineItems = [];
 
@@ -37,17 +42,20 @@ const createBooking = async (req, res) => {
     const tier = event.ticketTiers.id(requestedTicket.tierId);
     
     if (!tier) {
-      res.status(400);
-      throw new Error(`Ticket tier invalid: ${requestedTicket.tierId}`);
+      const err = new Error(`Ticket tier invalid: ${requestedTicket.tierId}`);
+      err.statusCode = 400;
+      throw err;
     }
 
     if (tier.capacity - tier.sold < requestedTicket.quantity) {
-      res.status(400);
-      throw new Error(`Not enough tickets available for tier: ${tier.name}`);
+      const err = new Error(`Not enough tickets available for tier: ${tier.name}`);
+      err.statusCode = 400;
+      throw err;
     }
 
     const price = tier.price;
-    totalAmount += price * requestedTicket.quantity;
+    totalPrice += price * requestedTicket.quantity;
+    totalQuantity += requestedTicket.quantity;
 
     bookingTickets.push({
       tierId: tier._id,
@@ -62,7 +70,7 @@ const createBooking = async (req, res) => {
               currency: 'usd',
               product_data: {
                 name: `${event.title} - ${tier.name} Ticket`,
-                images: [event.image],
+                images: event.image ? [event.image] : [],
               },
               unit_amount: Math.round(price * 100), // Stripe expects cents
             },
@@ -73,35 +81,37 @@ const createBooking = async (req, res) => {
 
   // Create initial booking record in database
   const booking = await Booking.create({
-    user: req.user.id,
+    user: req.user._id,
     event: event._id,
     tickets: bookingTickets,
-    totalAmount,
-    status: totalAmount === 0 ? BOOKING_STATUS.CONFIRMED : BOOKING_STATUS.PENDING
+    quantity: totalQuantity,
+    totalPrice,
+    status: totalPrice === 0 ? BOOKING_STATUS.CONFIRMED : BOOKING_STATUS.PENDING,
+    paymentStatus: totalPrice === 0 ? 'completed' : 'pending',
+    notes
   });
 
   // Handle Free tickets (skip stripe)
-  if (totalAmount === 0) {
+  if (totalPrice === 0) {
       // Update Event Sold Count
       for (const t of bookingTickets) {
          const tier = event.ticketTiers.id(t.tierId);
          tier.sold += t.quantity;
       }
-      event.totalSold += bookingTickets.reduce((acc, t) => acc + t.quantity, 0);
+      event.bookingsCount += totalQuantity;
       await event.save();
 
-      // Generate QR Code
-      const qrData = JSON.stringify({ bookingId: booking._id, user: req.user.id, event: event._id });
-      booking.qrCode = await QRCode.toDataURL(qrData);
+      // Generate Ticket Codes
+      booking.generateTicketCodes();
       await booking.save();
 
       // Send email
-      await sendBookingConfirmation(req.user, booking, event);
+      await sendBookingConfirmation(req.user.email, booking, event);
 
       return res.status(201).json({
           success: true,
           message: 'Free booking confirmed',
-          booking
+          data: { booking }
       });
   }
 
@@ -112,12 +122,14 @@ const createBooking = async (req, res) => {
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
-    success_url: `${frontendUrl}/dashboard?payment=success&bookingId=${booking._id}`,
+    success_url: `${frontendUrl}/booking-success?session_id={CHECKOUT_SESSION_ID}&bookingId=${booking._id}`,
     cancel_url: `${frontendUrl}/event/${event._id}?payment=cancelled`,
     client_reference_id: booking._id.toString(),
     customer_email: req.user.email,
     metadata: {
-        bookingId: booking._id.toString()
+        bookingId: booking._id.toString(),
+        userId: req.user._id.toString(),
+        eventId: event._id.toString()
     }
   });
 
@@ -127,64 +139,17 @@ const createBooking = async (req, res) => {
 
   res.status(200).json({
     success: true,
-    url: session.url
+    message: 'Redirect to Stripe checkout',
+    data: { url: session.url, bookingId: booking._id }
   });
 };
 
-// @desc    Stripe webhook endpoint for async fulfillment
-// @route   POST /api/v1/bookings/webhook
-// @access  Public (webhook)
-const stripeWebhook = async (req, res) => {
-    // This needs raw body parsing in server.js before this controller hits.
-    const sig = req.headers['stripe-signature'];
-    let event;
-
-    try {
-        event = stripe.webhooks.constructEvent(
-            req.body, // Assuming this is raw body buffers
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET
-        );
-    } catch (err) {
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const bookingId = session.metadata.bookingId;
-
-        const booking = await Booking.findById(bookingId).populate('user').populate('event');
-        if (booking) {
-            booking.status = BOOKING_STATUS.CONFIRMED;
-
-            // Update ticket counts in event
-            const populatedEvent = await Event.findById(booking.event._id);
-            for (const t of booking.tickets) {
-                const tier = populatedEvent.ticketTiers.id(t.tierId);
-                tier.sold += t.quantity;
-            }
-            populatedEvent.totalSold += booking.tickets.reduce((acc, t) => acc + t.quantity, 0);
-            await populatedEvent.save();
-
-            // Generate QR Code
-            const qrData = JSON.stringify({ bookingId: booking._id, user: booking.user._id, event: booking.event._id });
-            booking.qrCode = await QRCode.toDataURL(qrData);
-            await booking.save();
-
-            // Send Confirmation
-            await sendBookingConfirmation(booking.user, booking, populatedEvent);
-        }
-    }
-
-    res.json({ received: true });
-};
-
-// @desc    Get bookings for logged in user
-// @route   GET /api/v1/bookings/my-bookings
-// @access  Private/Attendee
-const getMyBookings = async (req, res) => {
-    const bookings = await Booking.find({ user: req.user.id })
-      .populate('event', 'title date location image')
+// @desc    Get all bookings for logged-in user
+// @route   GET /api/v1/bookings
+// @access  Private
+exports.getUserBookings = async (req, res) => {
+    const bookings = await Booking.find({ user: req.user._id })
+      .populate('event', 'title date location image status')
       .sort({ createdAt: -1 });
   
     res.status(200).json({
@@ -197,24 +162,26 @@ const getMyBookings = async (req, res) => {
 // @desc    Get single booking by ID
 // @route   GET /api/v1/bookings/:id
 // @access  Private
-const getBookingById = async (req, res) => {
+exports.getBookingById = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
-        .populate('event', 'title date location image organiser')
+        .populate('event', 'title date location venue capacity organiser organizer')
         .populate('user', 'name email');
     
     if (!booking) {
-        res.status(404);
-        throw new Error('Booking not found');
+        const err = new Error('Booking not found');
+        err.statusCode = 404;
+        throw err;
     }
 
     // Security: Only the attendee, the event organizer, or an admin can view a booking
-    if (
-        booking.user._id.toString() !== req.user.id && 
-        booking.event.organiser.toString() !== req.user.id && 
-        req.user.role !== 'admin'
-    ) {
-        res.status(403);
-        throw new Error('Not authorized to view this booking');
+    const isOwner = booking.user._id.toString() === req.user._id.toString();
+    const isOrganizer = booking.event.organizer?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isOrganizer && !isAdmin) {
+        const err = new Error('Not authorized to view this booking');
+        err.statusCode = 403;
+        throw err;
     }
 
     res.status(200).json({
@@ -223,51 +190,107 @@ const getBookingById = async (req, res) => {
     });
 };
 
-// @desc    Cancel booking
+// @desc    Cancel a booking
 // @route   PUT /api/v1/bookings/:id/cancel
 // @access  Private
-const cancelBooking = async (req, res) => {
+exports.cancelBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id).populate('event');
     
     if (!booking) {
-        res.status(404);
-        throw new Error('Booking not found');
+        const err = new Error('Booking not found');
+        err.statusCode = 404;
+        throw err;
     }
 
-    if (booking.user.toString() !== req.user.id && req.user.role !== 'admin') {
-        res.status(403);
-        throw new Error('Not authorized to cancel this booking');
+    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        const err = new Error('Not authorized to cancel this booking');
+        err.statusCode = 403;
+        throw err;
     }
 
     if (booking.status === BOOKING_STATUS.CANCELLED) {
-        res.status(400);
-        throw new Error('Booking is already cancelled');
+        const err = new Error('Booking is already cancelled');
+        err.statusCode = 400;
+        throw err;
     }
 
-    // Basic refund logic - in production this would trigger Stripe refund
+    // Update status
     booking.status = BOOKING_STATUS.CANCELLED;
+    booking.cancelledAt = new Date();
+    booking.cancelledBy = req.user._id;
+    booking.paymentStatus = 'refunded';
     
-    // Update Event Sold Count
+    // Update Event counts
     const event = await Event.findById(booking.event._id);
     for (const t of booking.tickets) {
         const tier = event.ticketTiers.id(t.tierId);
-        tier.sold -= t.quantity;
+        if (tier) tier.sold -= t.quantity;
     }
-    event.totalSold -= booking.tickets.reduce((acc, t) => acc + t.quantity, 0);
+    event.bookingsCount -= booking.quantity;
     
     await event.save();
     await booking.save();
 
+    // Send Cancellation Email
+    await sendBookingCancellation(req.user.email, event);
+
     res.status(200).json({
         success: true,
+        message: 'Booking cancelled successfully',
         data: booking
     });
 };
 
-module.exports = {
-  createBooking,
-  stripeWebhook,
-  getMyBookings,
-  getBookingById,
-  cancelBooking
+// @desc    Get all bookings (Admin only)
+// @route   GET /api/v1/bookings/admin/all
+// @access  Private/Admin
+exports.getAllBookings = async (req, res) => {
+  const bookings = await Booking.find()
+    .populate('event', 'title date location image')
+    .populate('user', 'name email')
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({ success: true, count: bookings.length, data: bookings });
+};
+
+// @desc    Stripe Webhook Handler
+exports.stripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+        logger.error(`❌ Webhook Error: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const bookingId = session.metadata.bookingId;
+
+        const booking = await Booking.findById(bookingId).populate('user');
+        if (booking) {
+            booking.status = BOOKING_STATUS.CONFIRMED;
+            booking.paymentStatus = 'completed';
+            booking.generateTicketCodes();
+            await booking.save();
+
+            // Update Event Sold Counts
+            const populatedEvent = await Event.findById(booking.event);
+            for (const t of booking.tickets) {
+                const tier = populatedEvent.ticketTiers.id(t.tierId);
+                if (tier) tier.sold += t.quantity;
+            }
+            populatedEvent.bookingsCount += booking.quantity;
+            await populatedEvent.save();
+
+            logger.info(`✅ Payment confirmed for booking: ${booking._id}`);
+            
+            // Send Confirmation Email
+            await sendBookingConfirmation(booking.user.email, booking, populatedEvent);
+        }
+    }
+
+    res.json({ received: true });
 };

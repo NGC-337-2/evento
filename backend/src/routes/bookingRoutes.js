@@ -1,35 +1,49 @@
+// src/routes/bookingRoutes.js
 const express = require('express');
-const { createBooking, getMyBookings, getBookingById } = require('../controllers/bookingController');
-const { protect, authorize } = require('../middleware/auth');
-const { ROLES } = require('../config/constants');
 const router = express.Router();
 
-// NOTE: Webhook is mounted in server.js directly due to raw body requirement
-// app.post('/api/v1/bookings/webhook', express.raw({type: 'application/json'}), stripeWebhook);
+// Controller & Middleware Imports
+const bookingController = require('../controllers/bookingController');
+const { protect } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { bookingSchema } = require('../utils/validation');
 
-router.use(protect);
+// ─── Protected Routes (Requires Authentication) ───────────────────────────────
 
-// @desc    Get all bookings (Admin only)
-// @route   GET /api/v1/bookings
-// @access  Private/Admin
-router.get('/', authorize(ROLES.ADMIN), (req, res) => {
-  res.status(200).json({ success: true, message: 'Get all bookings stub' });
-});
-
-router.route('/')
-  .post(createBooking);
-
-router.route('/my-bookings')
-  .get(getMyBookings);
-
-router.route('/:id')
-  .get(getBookingById);
-
-// @desc    Cancel booking
-// @route   PUT /api/v1/bookings/:id/cancel
+// @route   POST /api/v1/bookings
+// @desc    Create a new booking for an event
 // @access  Private
-router.put('/:id/cancel', (req, res) => {
-  res.status(200).json({ success: true, message: `Cancel booking ${req.params.id} stub` });
-});
+router.post(
+  '/',
+  protect,
+  validate(bookingSchema),
+  bookingController.createBooking
+);
+
+// @route   GET /api/v1/bookings
+// @desc    Get all bookings for the logged-in user
+// @access  Private
+router.get('/', protect, bookingController.getUserBookings);
+
+// @route   GET /api/v1/bookings/:id
+// @desc    Get single booking details by ID
+// @access  Private
+router.get('/:id', protect, bookingController.getBookingById);
+
+// @route   PUT /api/v1/bookings/:id/cancel
+// @desc    Cancel an existing booking
+// @access  Private
+router.put('/:id/cancel', protect, bookingController.cancelBooking);
+
+// ─── Admin-Only Routes ────────────────────────────────────────────────────────
+
+// @route   GET /api/v1/bookings/admin/all
+// @desc    Get all bookings (Admin only)
+// @access  Private/Admin
+const { authorize } = require('../middleware/auth');
+router.get('/admin/all', protect, authorize('admin'), bookingController.getAllBookings);
+
+// ⚠️ Note: Stripe webhook route is registered directly in server.js
+// at '/api/v1/bookings/webhook' to use raw body parsing & verify signatures.
 
 module.exports = router;

@@ -1,13 +1,27 @@
+// src/routes/statsRoutes.js
 const express = require('express');
-const { getOrganiserStats, getAdminStats } = require('../controllers/statsController');
-const { protect, authorize } = require('../middleware/auth');
-const { ROLES } = require('../config/constants');
-
 const router = express.Router();
 
-router.use(protect);
+// Controller & Middleware Imports
+const statsController = require('../controllers/statsController');
+const { protect, authorize } = require('../middleware/auth');
 
-router.get('/organiser', authorize(ROLES.ORGANISER, ROLES.ADMIN), getOrganiserStats);
-router.get('/admin', authorize(ROLES.ADMIN), getAdminStats);
+// ─── Protected Routes (Requires Authentication) ───────────────────────────────
+
+// @route   GET /api/v1/stats/dashboard
+// @desc    Get global dashboard statistics (Revenue, Bookings, Users)
+// @access  Private/Admin
+router.get('/dashboard', protect, authorize('admin'), statsController.getDashboardStats);
+
+// @route   GET /api/v1/stats/organiser
+// @desc    Get performance stats for the logged-in organizer
+// @access  Private/Organizer
+router.get('/organiser', protect, authorize('organizer', 'admin'), statsController.getOrganizerStats);
+
+
+// @route   GET /api/v1/stats/events/:id
+// @desc    Get detailed analytics for a specific event
+// @access  Private (Organizer/Admin)
+router.get('/events/:id', protect, statsController.getEventStats);
 
 module.exports = router;

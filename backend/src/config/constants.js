@@ -1,92 +1,59 @@
-/**
- * Application-wide constants for EventO
- */
-
-// User roles
-const ROLES = Object.freeze({
-  ATTENDEE: 'attendee',
-  ORGANISER: 'organiser',
-  ADMIN: 'admin',
-});
-
-// Event status lifecycle
-const EVENT_STATUS = Object.freeze({
-  DRAFT: 'draft',
-  PUBLISHED: 'published',
-  CANCELLED: 'cancelled',
-  COMPLETED: 'completed',
-  POSTPONED: 'postponed',
-});
-
-// Ticket tier types
-const TICKET_TIER = Object.freeze({
-  FREE: 'free',
-  GENERAL: 'general',
-  VIP: 'vip',
-  EARLY_BIRD: 'early_bird',
-});
-
-// Booking status lifecycle
-const BOOKING_STATUS = Object.freeze({
-  PENDING: 'pending',
-  CONFIRMED: 'confirmed',
-  CANCELLED: 'cancelled',
-  REFUNDED: 'refunded',
-  USED: 'used',
-});
-
-// Event categories
-const EVENT_CATEGORIES = Object.freeze([
-  'music',
-  'sports',
-  'technology',
-  'arts',
-  'business',
-  'food',
-  'health',
-  'education',
-  'comedy',
-  'film',
-  'fashion',
-  'charity',
-  'networking',
-  'other',
-]);
-
-// Pagination defaults
-const PAGINATION = Object.freeze({
-  DEFAULT_PAGE: 1,
-  DEFAULT_LIMIT: 12,
-  MAX_LIMIT: 50,
-});
-
-// JWT
-const JWT = Object.freeze({
-  ACCESS_EXPIRES: process.env.JWT_EXPIRES_IN || '15m',
-  REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-  COOKIE_MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
-
-// Sorting options for event list
-const SORT_OPTIONS = Object.freeze([
-  'upcoming',
-  'newest',
-  'oldest',
-  'price-low',
-  'price-high',
-  'popular',
-]);
-
-const MAX_RESULTS_PER_PAGE = 50;
-
+// src/config/constants.js
 module.exports = {
-  ROLES,
-  EVENT_STATUS,
-  TICKET_TIER,
-  BOOKING_STATUS,
-  EVENT_CATEGORIES,
-  PAGINATION,
-  SORT_OPTIONS,
-  MAX_RESULTS_PER_PAGE,
-  JWT,
+  // 👤 User Roles & Permissions
+  ROLES: {
+    ADMIN: 'admin',
+    ORGANIZER: 'organizer',
+    ATTENDEE: 'attendee',
+  },
+
+  // 🎫 Booking Statuses
+  BOOKING_STATUS: {
+    PENDING: 'pending',
+    CONFIRMED: 'confirmed',
+    CANCELLED: 'cancelled',
+    REFUNDED: 'refunded',
+  },
+
+  // 📅 Event Statuses
+  EVENT_STATUS: {
+    DRAFT: 'draft',
+    PUBLISHED: 'published',
+    ONGOING: 'ongoing',
+    COMPLETED: 'completed',
+    CANCELLED: 'cancelled',
+  },
+
+  // 📄 Pagination & Query Limits
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 10,
+    MAX_LIMIT: 100,
+  },
+
+  // 🔍 Validation Constraints
+  VALIDATION: {
+    PASSWORD_REGEX: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/,
+    MAX_TITLE_LENGTH: 100,
+    MAX_DESCRIPTION_LENGTH: 2000,
+    MAX_TAGS: 5,
+    MIN_PASSWORD_LENGTH: 8,
+  },
+
+  // ⚙️ Environment & App Config
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  IS_PRODUCTION: process.env.NODE_ENV === 'production',
+  IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
+  BASE_API_URL: process.env.NODE_ENV === 'production'
+    ? process.env.PROD_API_URL
+    : `http://localhost:${process.env.PORT || 5000}`,
+  
+  // 🌐 Email Templates/Subjects (placeholder structure)
+  EMAIL_SUBJECTS: {
+    WELCOME: 'Welcome to EventO!',
+    BOOKING_CONFIRMED: 'Your Booking is Confirmed ✅',
+    BOOKING_CANCELLED: 'Booking Cancelled ❌',
+    PASSWORD_RESET: 'Reset Your EventO Password 🔑',
+    EVENT_UPDATED: 'Event Update: {{eventTitle}} 📢',
+  },
 };

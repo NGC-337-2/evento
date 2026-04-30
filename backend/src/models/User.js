@@ -1,75 +1,89 @@
+// src/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { ROLES } = require('../config/constants');
+const { ROLES, VALIDATION } = require('../config/constants');
 
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Please provide your name'],
-      trim: true,
-      maxlength: [50, 'Name cannot be more than 50 characters'],
-    },
-    email: {
-      type: String,
-      required: [true, 'Please provide your email'],
-      unique: true,
-      trim: true,
-      lowercase: true,
-      match: [
-        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-        'Please provide a valid email',
-      ],
-    },
-    password: {
-      type: String,
-      required: [true, 'Please provide a password'],
-      minlength: [8, 'Password must be at least 8 characters'],
-      select: false, // Don't return password by default
-    },
-    role: {
-      type: String,
-      enum: Object.values(ROLES),
-      default: ROLES.ATTENDEE,
-    },
-    avatar: {
-      type: String,
-      default: null,
-    },
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    emailVerificationToken: String,
-    emailVerificationExpires: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
-    refreshToken: {
-      type: String,
-      select: false,
-    },
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
-  {
-    timestamps: true,
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [VALIDATION.MIN_PASSWORD_LENGTH, `Password must be at least ${VALIDATION.MIN_PASSWORD_LENGTH} characters`],
+    select: false // Prevents password from being returned in queries
+  },
+  role: {
+    type: String,
+    enum: Object.values(ROLES),
+    default: ROLES.ATTENDEE
+  },
+  profileImage: {
+    type: String,
+    default: null
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: String,
+  verificationTokenExpires: Date,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  status: {
+    type: String,
+    enum: ['active', 'suspended', 'deleted'],
+    default: 'active'
   }
-);
-
-// Encrypt password using bcrypt
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    next();
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+// 🔍 Indexes for faster query performance
+
+userSchema.index({ role: 1 });
+userSchema.index({ status: 1 });
+
+// 🔒 Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 🔑 Compare candidate password with hashed password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
+// 🛡️ Sanitize user data before sending to client
+userSchema.methods.toJSON = function() {
+  const user = this.toObject();
+  delete user.password;
+  delete user.verificationToken;
+  delete user.verificationTokenExpires;
+  delete user.resetPasswordToken;
+  delete user.resetPasswordExpires;
+  return user;
+};
 
 const User = mongoose.model('User', userSchema);
-
 module.exports = User;
