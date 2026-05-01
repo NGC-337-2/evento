@@ -39,5 +39,5 @@ auditLogSchema.index({ admin: 1 });
 auditLogSchema.index({ action: 1 });
 auditLogSchema.index({ createdAt: -1 });
 
-const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+const AuditLog = mongoose.models.AuditLog || mongoose.model('AuditLog', auditLogSchema);
 module.exports = AuditLog;

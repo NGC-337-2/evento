@@ -54,7 +54,6 @@ const RegisterPage = () => {
     dispatch(register(userData));
   };
 
-
   if (isLoading) {
     return <Spinner fullScreen />;
   }
@@ -69,7 +68,10 @@ const RegisterPage = () => {
             </h2>
             <p className="mt-2 text-sm leading-6 text-secondary-500 dark:text-secondary-400">
               Already have an account?{' '}
-              <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+              <Link
+                to="/login"
+                className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+              >
                 Sign in
               </Link>
             </p>
@@ -79,7 +81,10 @@ const RegisterPage = () => {
             <div>
               <form onSubmit={onSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white"
+                  >
                     Full Name
                   </label>
                   <div className="mt-2">
@@ -97,7 +102,10 @@ const RegisterPage = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white"
+                  >
                     Email address
                   </label>
                   <div className="mt-2">
@@ -116,7 +124,10 @@ const RegisterPage = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white"
+                  >
                     Password
                   </label>
                   <div className="mt-2">
@@ -139,7 +150,9 @@ const RegisterPage = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div
-                      onClick={() => setFormData(prev => ({ ...prev, role: 'attendee' }))}
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, role: 'attendee' }))
+                      }
                       className={`relative flex cursor-pointer rounded-lg px-5 py-4 shadow-sm focus:outline-none ring-1 ring-inset transition-colors ${
                         role === 'attendee'
                           ? 'ring-primary-600 bg-primary-50 dark:bg-primary-900/20'
@@ -149,18 +162,32 @@ const RegisterPage = () => {
                       <div className="flex w-full items-center justify-between">
                         <div className="flex items-center">
                           <div className="text-sm">
-                            <p className={`font-medium ${role === 'attendee' ? 'text-primary-900 dark:text-primary-200' : 'text-secondary-900 dark:text-white'}`}>
+                            <p
+                              className={`font-medium ${role === 'attendee' ? 'text-primary-900 dark:text-primary-200' : 'text-secondary-900 dark:text-white'}`}
+                            >
                               Attend Events
                             </p>
-                            <p className={`inline ${role === 'attendee' ? 'text-primary-700 dark:text-primary-300' : 'text-secondary-500 dark:text-secondary-400'}`}>
+                            <p
+                              className={`inline ${role === 'attendee' ? 'text-primary-700 dark:text-primary-300' : 'text-secondary-500 dark:text-secondary-400'}`}
+                            >
                               Buy tickets
                             </p>
                           </div>
                         </div>
                         {role === 'attendee' && (
                           <div className="shrink-0 text-primary-600 dark:text-primary-400">
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg
+                              className="h-6 w-6"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth="1.5"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
                             </svg>
                           </div>
                         )}
@@ -168,7 +195,9 @@ const RegisterPage = () => {
                     </div>
 
                     <div
-                      onClick={() => setFormData(prev => ({ ...prev, role: 'organizer' }))}
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, role: 'organizer' }))
+                      }
                       className={`relative flex cursor-pointer rounded-lg px-5 py-4 shadow-sm focus:outline-none ring-1 ring-inset transition-colors ${
                         role === 'organizer'
                           ? 'ring-primary-600 bg-primary-50 dark:bg-primary-900/20'
@@ -178,18 +207,32 @@ const RegisterPage = () => {
                       <div className="flex w-full items-center justify-between">
                         <div className="flex items-center">
                           <div className="text-sm">
-                            <p className={`font-medium ${role === 'organizer' ? 'text-primary-900 dark:text-primary-200' : 'text-secondary-900 dark:text-white'}`}>
+                            <p
+                              className={`font-medium ${role === 'organizer' ? 'text-primary-900 dark:text-primary-200' : 'text-secondary-900 dark:text-white'}`}
+                            >
                               Organize
                             </p>
-                            <p className={`inline ${role === 'organizer' ? 'text-primary-700 dark:text-primary-300' : 'text-secondary-500 dark:text-secondary-400'}`}>
+                            <p
+                              className={`inline ${role === 'organizer' ? 'text-primary-700 dark:text-primary-300' : 'text-secondary-500 dark:text-secondary-400'}`}
+                            >
                               Host events
                             </p>
                           </div>
                         </div>
                         {role === 'organizer' && (
                           <div className="shrink-0 text-primary-600 dark:text-primary-400">
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg
+                              className="h-6 w-6"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth="1.5"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
                             </svg>
                           </div>
                         )}
@@ -217,11 +260,13 @@ const RegisterPage = () => {
           src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=1908&q=80"
           alt="Concert crowd"
         />
-        <div className="absolute inset-0 bg-primary-600 mix-blend-multiply" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-primary-600 mix-blend-multiply"
+          aria-hidden="true"
+        />
       </div>
     </div>
   );
 };
 
 export default RegisterPage;
-

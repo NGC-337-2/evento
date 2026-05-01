@@ -22,7 +22,6 @@ axiosClient.interceptors.request.use(
   }
 );
 
-
 // Response interceptor to handle token expiration/refresh (stub for now)
 axiosClient.interceptors.response.use(
   (response) => {

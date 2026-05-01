@@ -22,7 +22,7 @@ describe('CategoryDropdown', () => {
         </BrowserRouter>
       </Provider>
     );
-    
+
     expect(screen.getByText(/Categories/i)).toBeInTheDocument();
   });
 

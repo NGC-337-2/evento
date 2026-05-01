@@ -11,49 +11,80 @@ const initialState = {
 };
 
 // Create booking (checkout)
-export const createBooking = createAsyncThunk('bookings/create', async (bookingData, thunkAPI) => {
-  try {
-    const response = await axiosClient.post('/bookings', bookingData);
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+export const createBooking = createAsyncThunk(
+  'bookings/create',
+  async (bookingData, thunkAPI) => {
+    try {
+      const response = await axiosClient.post('/bookings', bookingData);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
+);
 
 // Get my bookings
-export const getMyBookings = createAsyncThunk('bookings/getMy', async (_, thunkAPI) => {
-  try {
-    const response = await axiosClient.get('/bookings');
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+export const getMyBookings = createAsyncThunk(
+  'bookings/getMy',
+  async (_, thunkAPI) => {
+    try {
+      const response = await axiosClient.get('/bookings');
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
+);
 
 // Get all bookings (Admin)
-export const getAllBookings = createAsyncThunk('bookings/getAll', async (_, thunkAPI) => {
+export const getAllBookings = createAsyncThunk(
+  'bookings/getAll',
+  async (_, thunkAPI) => {
     try {
       const response = await axiosClient.get('/bookings/admin/all');
       return response.data;
     } catch (error) {
-      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
       return thunkAPI.rejectWithValue(message);
     }
-  });
-
+  }
+);
 
 // Cancel booking
-export const cancelBooking = createAsyncThunk('bookings/cancel', async (id, thunkAPI) => {
-  try {
-    const response = await axiosClient.put(`/bookings/${id}/cancel`);
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+export const cancelBooking = createAsyncThunk(
+  'bookings/cancel',
+  async (id, thunkAPI) => {
+    try {
+      const response = await axiosClient.put(`/bookings/${id}/cancel`);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
+);
 
 export const bookingSlice = createSlice({
   name: 'bookings',
@@ -110,7 +141,9 @@ export const bookingSlice = createSlice({
 
       .addCase(cancelBooking.fulfilled, (state, action) => {
         state.bookings = state.bookings.map((booking) =>
-          booking._id === action.payload.data._id ? action.payload.data : booking
+          booking._id === action.payload.data._id
+            ? action.payload.data
+            : booking
         );
       });
   },

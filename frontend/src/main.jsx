@@ -13,5 +13,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <App />
       <ToastContainer position="bottom-right" />
     </Provider>
-  </React.StrictMode>,
+  </React.StrictMode>
 );

@@ -119,5 +119,5 @@ bookingSchema.methods.canBeCancelled = function () {
     this.paymentStatus === 'completed';
 };
 
-const Booking = mongoose.model('Booking', bookingSchema);
+const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
 module.exports = Booking;

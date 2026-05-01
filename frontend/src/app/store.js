@@ -16,6 +16,5 @@ export const store = configureStore({
     stats: statsReducer,
   },
 
-
   devTools: process.env.NODE_ENV !== 'production',
 });

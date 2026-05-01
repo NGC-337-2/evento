@@ -104,5 +104,5 @@ eventSchema.methods.isActive = function() {
   return [EVENT_STATUS.PUBLISHED, EVENT_STATUS.ONGOING].includes(this.status);
 };
 
-const Event = mongoose.model('Event', eventSchema);
+const Event = mongoose.models.Event || mongoose.model('Event', eventSchema);
 module.exports = Event;

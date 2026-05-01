@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import app from '../server';
+import { app } from '../server';
 import User from '../src/models/User';
 
 // Mock mongoose connect/disconnect
@@ -48,9 +48,9 @@ describe('Auth API Endpoints', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.body).toHaveProperty('success', true);
-      expect(res.body).toHaveProperty('token');
-      expect(res.body).toHaveProperty('user');
-      expect(res.body.user).toHaveProperty('email', mockUser.email);
+      expect(res.body.data).toHaveProperty('token');
+      expect(res.body.data).toHaveProperty('user');
+      expect(res.body.data.user).toHaveProperty('email', mockUser.email);
     });
 
     it('should fail if user already exists', async () => {
@@ -61,9 +61,9 @@ describe('Auth API Endpoints', () => {
         .post('/api/v1/auth/register')
         .send(mockUser);
 
-      expect(res.statusCode).toEqual(400);
+      expect(res.statusCode).toEqual(409);
       expect(res.body).toHaveProperty('success', false);
-      expect(res.body).toHaveProperty('message', 'User already exists');
+      expect(res.body).toHaveProperty('message', 'User with this email already exists');
     });
   });
 
@@ -72,7 +72,8 @@ describe('Auth API Endpoints', () => {
        const userDoc = {
         _id: new mongoose.Types.ObjectId(),
         ...mockUser,
-        matchPassword: vi.fn().mockResolvedValue(true), // Password matches
+        isVerified: true,
+        comparePassword: vi.fn().mockResolvedValue(true), // Password matches
         save: vi.fn().mockResolvedValue(true)
       };
 
@@ -86,27 +87,28 @@ describe('Auth API Endpoints', () => {
 
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
-      expect(res.body).toHaveProperty('token');
+      expect(res.body.data).toHaveProperty('token');
     });
 
     it('should fail with invalid credentials (wrong password)', async () => {
         const userDoc = {
          _id: new mongoose.Types.ObjectId(),
          ...mockUser,
-         matchPassword: vi.fn().mockResolvedValue(false), // Password does NOT match
+         isVerified: true,
+         comparePassword: vi.fn().mockResolvedValue(false), // Password does NOT match
          save: vi.fn().mockResolvedValue(true)
        };
  
-       const queryMock = { select: vi.fn().mockResolvedValue(userDoc) };
-       vi.spyOn(User, 'findOne').mockReturnValue(queryMock);
+        const queryMock = { select: vi.fn().mockResolvedValue(userDoc) };
+        vi.spyOn(User, 'findOne').mockReturnValue(queryMock);
  
-       const res = await request(app)
-         .post('/api/v1/auth/login')
-         .send({ email: mockUser.email, password: 'wrongpassword' });
+        const res = await request(app)
+          .post('/api/v1/auth/login')
+          .send({ email: mockUser.email, password: 'wrongpassword' });
  
-       expect(res.statusCode).toEqual(401);
-       expect(res.body).toHaveProperty('success', false);
-       expect(res.body).toHaveProperty('message', 'Invalid credentials');
-     });
+        expect(res.statusCode).toEqual(401);
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('message', 'Invalid email or password');
+      });
   });
 });

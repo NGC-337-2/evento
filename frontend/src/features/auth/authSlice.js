@@ -3,7 +3,7 @@ import axiosClient from '../../api/axiosClient';
 
 // Get user from localStorage
 const userStr = localStorage.getItem('evento_user');
-const user = (userStr && userStr !== 'undefined') ? JSON.parse(userStr) : null;
+const user = userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null;
 const token = localStorage.getItem('evento_token');
 
 const initialState = {
@@ -15,47 +15,65 @@ const initialState = {
   message: '',
 };
 
-
 // Register user
-export const register = createAsyncThunk('auth/register', async (userData, thunkAPI) => {
-  try {
-    const response = await axiosClient.post('/auth/register', userData);
-    if (response.data && response.data.data) {
-      localStorage.setItem('evento_user', JSON.stringify(response.data.data.user));
-      localStorage.setItem('evento_token', response.data.data.token);
-    }
+export const register = createAsyncThunk(
+  'auth/register',
+  async (userData, thunkAPI) => {
+    try {
+      const response = await axiosClient.post('/auth/register', userData);
+      if (response.data && response.data.data) {
+        localStorage.setItem(
+          'evento_user',
+          JSON.stringify(response.data.data.user)
+        );
+        localStorage.setItem('evento_token', response.data.data.token);
+      }
 
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
+);
 
 // Login user
-export const login = createAsyncThunk('auth/login', async (userData, thunkAPI) => {
-  try {
-    const response = await axiosClient.post('/auth/login', userData);
-    if (response.data && response.data.data) {
-      localStorage.setItem('evento_user', JSON.stringify(response.data.data.user));
-      localStorage.setItem('evento_token', response.data.data.token);
+export const login = createAsyncThunk(
+  'auth/login',
+  async (userData, thunkAPI) => {
+    try {
+      const response = await axiosClient.post('/auth/login', userData);
+      if (response.data && response.data.data) {
+        localStorage.setItem(
+          'evento_user',
+          JSON.stringify(response.data.data.user)
+        );
+        localStorage.setItem('evento_token', response.data.data.token);
+      }
+
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
     }
-
-    return response.data;
-  } catch (error) {
-
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
   }
-});
+);
 
 // Logout user
 export const logout = createAsyncThunk('auth/logout', async () => {
   localStorage.removeItem('evento_user');
   localStorage.removeItem('evento_token');
 });
-
-
 
 export const authSlice = createSlice({
   name: 'auth',
@@ -80,7 +98,6 @@ export const authSlice = createSlice({
         state.token = action.payload.data.token;
       })
 
-
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
@@ -97,7 +114,6 @@ export const authSlice = createSlice({
         state.token = action.payload.data.token;
       })
 
-
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
@@ -112,7 +128,10 @@ export const authSlice = createSlice({
         (action) => action.type === 'users/updateProfile/fulfilled',
         (state, action) => {
           state.user = action.payload.data;
-          localStorage.setItem('evento_user', JSON.stringify(action.payload.data));
+          localStorage.setItem(
+            'evento_user',
+            JSON.stringify(action.payload.data)
+          );
         }
       )
       .addMatcher(
@@ -126,7 +145,6 @@ export const authSlice = createSlice({
       );
   },
 });
-
 
 export const { reset } = authSlice.actions;
 export default authSlice.reducer;

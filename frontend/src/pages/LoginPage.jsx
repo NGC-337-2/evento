@@ -69,7 +69,10 @@ const LoginPage = () => {
             </h2>
             <p className="mt-2 text-sm leading-6 text-secondary-500 dark:text-secondary-400">
               Not a member?{' '}
-              <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+              <Link
+                to="/register"
+                className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+              >
                 Start a 14 day free trial
               </Link>
             </p>
@@ -79,7 +82,10 @@ const LoginPage = () => {
             <div>
               <form onSubmit={onSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white"
+                  >
                     Email address
                   </label>
                   <div className="mt-2">
@@ -97,7 +103,10 @@ const LoginPage = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white"
+                  >
                     Password
                   </label>
                   <div className="mt-2">
@@ -122,13 +131,19 @@ const LoginPage = () => {
                       type="checkbox"
                       className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-600 dark:border-secondary-700 dark:bg-secondary-800 dark:checked:bg-primary-600"
                     />
-                    <label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-secondary-900 dark:text-secondary-300">
+                    <label
+                      htmlFor="remember-me"
+                      className="ml-3 block text-sm leading-6 text-secondary-900 dark:text-secondary-300"
+                    >
                       Remember me
                     </label>
                   </div>
 
                   <div className="text-sm leading-6">
-                    <a href="#" className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+                    <a
+                      href="#"
+                      className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                    >
                       Forgot password?
                     </a>
                   </div>
@@ -153,11 +168,13 @@ const LoginPage = () => {
           src="https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80"
           alt=""
         />
-        <div className="absolute inset-0 bg-primary-600 mix-blend-multiply" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-primary-600 mix-blend-multiply"
+          aria-hidden="true"
+        />
       </div>
     </div>
   );
 };
 
 export default LoginPage;
-

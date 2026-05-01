@@ -12,74 +12,114 @@ const initialState = {
     page: 1,
     limit: 12,
     total: 0,
-    pages: 0
+    pages: 0,
   },
   filters: {
-      keyword: '',
-      category: '',
-      sortBy: 'newest'
-  }
+    keyword: '',
+    category: '',
+    sortBy: 'newest',
+  },
 };
 
 // Get events
-export const getEvents = createAsyncThunk('events/getAll', async (searchParams = {}, thunkAPI) => {
-  try {
-    // searchParams could be { page: 1, keyword: 'concert', category: 'music' }
-    const params = new URLSearchParams(searchParams);
-    const response = await axiosClient.get(`/events?${params.toString()}`);
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+export const getEvents = createAsyncThunk(
+  'events/getAll',
+  async (searchParams = {}, thunkAPI) => {
+    try {
+      // searchParams could be { page: 1, keyword: 'concert', category: 'music' }
+      const params = new URLSearchParams(searchParams);
+      const response = await axiosClient.get(`/events?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
+);
 
 // Get single event by id
-export const getEventById = createAsyncThunk('events/getById', async (id, thunkAPI) => {
+export const getEventById = createAsyncThunk(
+  'events/getById',
+  async (id, thunkAPI) => {
     try {
       const response = await axiosClient.get(`/events/${id}`);
       return response.data;
     } catch (error) {
-      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
       return thunkAPI.rejectWithValue(message);
     }
-});
+  }
+);
 
 // Create event
-export const createEvent = createAsyncThunk('events/create', async (eventData, thunkAPI) => {
+export const createEvent = createAsyncThunk(
+  'events/create',
+  async (eventData, thunkAPI) => {
     try {
       // eventData should be FormData for image upload
       const response = await axiosClient.post('/events', eventData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       return response.data;
     } catch (error) {
-      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
       return thunkAPI.rejectWithValue(message);
     }
-});
+  }
+);
 
 // Update event
-export const updateEvent = createAsyncThunk('events/update', async ({ id, eventData }, thunkAPI) => {
+export const updateEvent = createAsyncThunk(
+  'events/update',
+  async ({ id, eventData }, thunkAPI) => {
     try {
       const response = await axiosClient.put(`/events/${id}`, eventData);
       return response.data;
     } catch (error) {
-      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
       return thunkAPI.rejectWithValue(message);
     }
-});
+  }
+);
 
 // Delete event
-export const deleteEvent = createAsyncThunk('events/delete', async (id, thunkAPI) => {
+export const deleteEvent = createAsyncThunk(
+  'events/delete',
+  async (id, thunkAPI) => {
     try {
       const response = await axiosClient.delete(`/events/${id}`);
       return { id, message: response.data.message };
     } catch (error) {
-      const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
       return thunkAPI.rejectWithValue(message);
     }
-});
+  }
+);
 
 export const eventsSlice = createSlice({
   name: 'events',
@@ -93,8 +133,8 @@ export const eventsSlice = createSlice({
       state.event = null;
     },
     setFilters: (state, action) => {
-        state.filters = { ...state.filters, ...action.payload };
-    }
+      state.filters = { ...state.filters, ...action.payload };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -150,7 +190,9 @@ export const eventsSlice = createSlice({
         state.isLoading = false;
         state.isSuccess = true;
         state.event = action.payload.data;
-        state.events = state.events.map((ev) => ev._id === action.payload.data._id ? action.payload.data : ev);
+        state.events = state.events.map((ev) =>
+          ev._id === action.payload.data._id ? action.payload.data : ev
+        );
       })
       .addCase(updateEvent.rejected, (state, action) => {
         state.isLoading = false;
@@ -164,14 +206,15 @@ export const eventsSlice = createSlice({
       .addCase(deleteEvent.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.events = state.events.filter((ev) => ev._id !== action.payload.id);
+        state.events = state.events.filter(
+          (ev) => ev._id !== action.payload.id
+        );
       })
       .addCase(deleteEvent.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
       });
-
   },
 });
 

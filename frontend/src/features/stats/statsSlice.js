@@ -11,16 +11,23 @@ const initialState = {
 };
 
 // Get Admin Stats
-export const getAdminStats = createAsyncThunk('stats/getAdmin', async (_, thunkAPI) => {
-  try {
-    const response = await axiosClient.get('/stats/dashboard');
-    return response.data;
-  } catch (error) {
-    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
-    return thunkAPI.rejectWithValue(message);
+export const getAdminStats = createAsyncThunk(
+  'stats/getAdmin',
+  async (_, thunkAPI) => {
+    try {
+      const response = await axiosClient.get('/stats/dashboard');
+      return response.data;
+    } catch (error) {
+      const message =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
+      return thunkAPI.rejectWithValue(message);
+    }
   }
-});
-
+);
 
 export const statsSlice = createSlice({
   name: 'stats',
@@ -50,7 +57,6 @@ export const statsSlice = createSlice({
       });
   },
 });
-
 
 export const { resetStatsState } = statsSlice.actions;
 export default statsSlice.reducer;
