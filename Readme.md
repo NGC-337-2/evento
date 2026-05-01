@@ -48,10 +48,13 @@ evento/
 ├── frontend/                 # React 18 + Vite + Tailwind
 │   ├── src/
 │   │   ├── components/       # Reusable UI components
+│   │   ├── features/         # Redux Toolkit slices & logic
 │   │   ├── pages/            # Route-level views
-│   │   ├── store/            # Redux Toolkit slices & RTK Query
-│   │   ├── utils/            # Helpers, formatters, API clients
-│   │   └── App.jsx
+│   │   ├── test/             # Test setup & mocks
+│   │   └── utils/            # Helpers, formatters, API clients
+│   ├── cypress/              # Cypress E2E tests
+│   ├── vitest.config.js      # Vitest configuration
+│   ├── cypress.config.js     # Cypress configuration
 │   └── package.json
 ├── backend/                  # Node.js + Express + MongoDB
 │   ├── src/
@@ -61,8 +64,9 @@ evento/
 │   │   ├── routes/           # Express routers
 │   │   ├── middleware/       # Auth, validation, error handling
 │   │   └── utils/            # Helpers, upload, email, stripe
+│   ├── tests/                # Backend unit/integration tests
 │   └── package.json
-├── docs/                     # Architecture, API specs, runbooks
+├── .github/workflows/        # CI/CD (GitHub Actions)
 └── README.md
 ```
 
@@ -132,20 +136,37 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Quality
 
+### 🧹 Linting & Formatting
 ```bash
-# Backend unit & integration tests
-cd backend
-npm run test            # Run all tests
-npm run test:watch      # Watch mode
-npm run test:coverage   # Generate coverage report
+# Check formatting (Prettier)
+npm run format:check
 
-# Frontend & E2E tests
-cd ../frontend
-npm run test:e2e        # Cypress headless
-npm run test:e2e:open   # Cypress UI
+# Run linter (ESLint)
+npm run lint
+
+# Automatically fix linting issues
+npm run lint:fix
 ```
+
+### 🧪 Running Tests
+| Layer | Tool | Commands |
+|-------|------|----------|
+| **Backend** | Vitest | `npm test`, `npm run test:watch`, `npm run test:coverage` |
+| **Frontend** | Vitest | `npm test`, `npm run test:run`, `npm run test:ui` |
+| **E2E** | Cypress | `npm run test:e2e` (UI), `npm run test:e2e:run` (Headless) |
+
+---
+
+## ⚙️ CI/CD Pipeline
+
+This project uses **GitHub Actions** for continuous integration. Every push and pull request to `main` or `develop` triggers:
+1. **Linting & Formatting Checks**: Ensures code adheres to project standards.
+2. **Backend Tests**: Runs all unit and integration tests for the API.
+3. **Frontend Tests**: Runs unit tests for React components and logic.
+
+The workflow configuration is located in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ---
 
