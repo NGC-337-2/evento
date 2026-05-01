@@ -38,16 +38,20 @@ const passwordResetSchema = Joi.object({
 const eventSchema = Joi.object({
   title: Joi.string().trim().max(VALIDATION.MAX_TITLE_LENGTH).required(),
   description: Joi.string().trim().max(VALIDATION.MAX_DESCRIPTION_LENGTH).optional(),
-  date: Joi.date().greater('now').required().messages({
-    'date.greater': 'Event date must be in the future'
+  date: Joi.date().required().messages({
+    'any.required': 'Event date is required'
   }),
   location: Joi.object({
     venue: Joi.string().required(),
-    address: Joi.string().optional(),
-    city: Joi.string().optional(),
-    country: Joi.string().optional()
+    address: Joi.string().allow('', null).optional(),
+    city: Joi.string().allow('', null).optional(),
+    country: Joi.string().allow('', null).optional()
   }).required(),
-  category: Joi.string().valid('conference', 'workshop', 'concert', 'seminar', 'social', 'sports', 'other').required(),
+  category: Joi.string().valid(
+    'music', 'sports', 'technology', 'arts', 'business', 'food', 
+    'health', 'education', 'comedy', 'film', 'fashion', 'charity', 
+    'networking', 'other', 'conference', 'workshop', 'concert', 'seminar', 'social'
+  ).required(),
   ticketTiers: Joi.array().items(Joi.object({
     name: Joi.string().required(),
     price: Joi.number().min(0).required(),

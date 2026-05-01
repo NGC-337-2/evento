@@ -93,16 +93,25 @@ bookingSchema.virtual('createdAtFormatted').get(function () {
 // 🎫 Method: Generate unique ticket codes
 bookingSchema.methods.generateTicketCodes = function () {
   const codes = [];
-  const shortId = this._id.toString().slice(-8).toUpperCase();
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const shortId = this._id.toString().slice(-6).toUpperCase();
 
   for (let i = 0; i < this.quantity; i++) {
-    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-    codes.push(`EVT-${shortId}-${randomPart}`);
+    const randomPart = Math.floor(100000 + Math.random() * 900000); // 6-digit random number
+    codes.push(`EVT-${dateStr}-${randomPart}-${shortId}-${i + 1}`);
   }
 
   this.ticketCodes = codes;
   return codes;
 };
+
+// 🛡️ Pre-save hook to ensure ticket codes exist
+bookingSchema.pre('save', function (next) {
+  if (this.isNew && (!this.ticketCodes || this.ticketCodes.length === 0)) {
+    this.generateTicketCodes();
+  }
+  next();
+});
 
 // ✅ Method: Check if booking can be cancelled
 bookingSchema.methods.canBeCancelled = function () {

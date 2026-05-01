@@ -55,6 +55,11 @@ router.get('/event/:eventId', protect, authorize('organizer', 'admin'), bookingC
 // @access  Private/Organizer/Admin
 router.patch('/:id/check-in', protect, authorize('organizer', 'admin'), bookingController.checkInAttendee);
 
+// @route   GET /api/v1/bookings/verify/:code
+// @desc    Verify ticket code
+// @access  Private/Organizer/Admin
+router.get('/verify/:code', protect, authorize('organizer', 'admin'), bookingController.verifyTicket);
+
 // ⚠️ Note: Stripe webhook route is registered directly in server.js
 // at '/api/v1/bookings/webhook' to use raw body parsing & verify signatures.
 

@@ -42,7 +42,7 @@ const EditEventPage = () => {
         .unwrap()
         .then(() => {
             toast.success('Event updated successfully!');
-            navigate(`/event/${id}`);
+            navigate('/dashboard');
         })
         .catch((err) => toast.error(err))
         .finally(() => setIsSaving(false));

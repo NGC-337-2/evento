@@ -223,30 +223,37 @@ exports.cancelBooking = async (req, res) => {
         throw err;
     }
 
-    // Update status
+    const event = await Event.findById(booking.event._id);
+
+    // Update Event counts ONLY if the booking was confirmed/paid (meaning counts were incremented)
+    if (booking.status === BOOKING_STATUS.CONFIRMED && event) {
+        for (const t of booking.tickets) {
+            const tier = event.ticketTiers.id(t.tierId);
+            if (tier) {
+                tier.sold = Math.max(0, tier.sold - t.quantity);
+            }
+        }
+        event.bookingsCount = Math.max(0, event.bookingsCount - booking.quantity);
+        await event.save();
+    }
+
+    // Update status to cancelled
     booking.status = BOOKING_STATUS.CANCELLED;
     booking.cancelledAt = new Date();
     booking.cancelledBy = req.user._id;
     booking.paymentStatus = 'refunded';
     
-    // Update Event counts
-    const event = await Event.findById(booking.event._id);
-    for (const t of booking.tickets) {
-        const tier = event.ticketTiers.id(t.tierId);
-        if (tier) tier.sold -= t.quantity;
-    }
-    event.bookingsCount -= booking.quantity;
-    
-    await event.save();
     await booking.save();
 
     // Log audit if cancelled by admin
     if (req.user.role === 'admin') {
-        await logAudit(req, 'CANCEL_BOOKING', 'Booking', booking._id, { eventTitle: event.title });
+        await logAudit(req, 'CANCEL_BOOKING', 'Booking', booking._id, { eventTitle: event?.title || 'Unknown Event' });
     }
 
     // Send Cancellation Email
-    await sendBookingCancellation(req.user.email, event);
+    if (event) {
+        await sendBookingCancellation(req.user.email, event);
+    }
 
     res.status(200).json({
         success: true,
@@ -329,6 +336,44 @@ exports.checkInAttendee = async (req, res) => {
         success: true,
         message: 'Attendee checked in successfully',
         data: booking
+    });
+};
+
+// @desc    Verify a ticket code (QR Scan)
+// @route   GET /api/v1/bookings/verify/:code
+// @access  Private (Organizer/Admin)
+exports.verifyTicket = async (req, res) => {
+    const { code } = req.params;
+
+    const booking = await Booking.findOne({ ticketCodes: code })
+        .populate('event', 'title date location venue organizer')
+        .populate('user', 'name email');
+
+    if (!booking) {
+        const err = new Error('Invalid ticket code');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Authorization: Only the organizer of the event or an admin can verify the code
+    if (booking.event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        const err = new Error('Not authorized to verify tickets for this event');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Ticket verified successfully',
+        data: {
+            bookingId: booking._id,
+            attendeeName: booking.user.name,
+            attendeeEmail: booking.user.email,
+            eventTitle: booking.event.title,
+            status: booking.status,
+            checkedIn: booking.checkedIn,
+            checkedInAt: booking.checkedInAt
+        }
     });
 };
 

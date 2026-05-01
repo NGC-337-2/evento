@@ -20,7 +20,7 @@ const CreateEventPage = () => {
       }
       if (isSuccess && event) {
           toast.success('Event created successfully!');
-          navigate(`/event/${event._id}`);
+          navigate('/dashboard');
           dispatch(resetEventsState());
       }
   }, [isSuccess, isError, message, event, navigate, dispatch]);

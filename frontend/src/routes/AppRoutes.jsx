@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
+import DashboardLayout from '../layouts/DashboardLayout';
 import ProtectedRoute from './ProtectedRoute';
 
 // Lazy loading pages (stubs for now, we'll create standard imports to ensure it compiles first)
@@ -23,9 +24,11 @@ const AppRoutes = () => {
         <Route path="event/:id" element={<EventDetailPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
-        
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
+      </Route>
+
+      {/* Dashboard Routes with unique layout */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<DashboardLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route element={<ProtectedRoute allowedRoles={['organizer', 'admin']} />}>

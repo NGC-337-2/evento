@@ -19,9 +19,11 @@ const eventSchema = new mongoose.Schema({
     required: [true, 'Event date is required'],
     validate: {
       validator: function(v) {
-        return v >= new Date(); // Must be today or in the future
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Allow any time today
+        return v >= today;
       },
-      message: 'Event date must be in the future or today'
+      message: 'Event date must be today or in the future'
     }
   },
   location: {
@@ -37,7 +39,6 @@ const eventSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['conference', 'workshop', 'concert', 'seminar', 'social', 'sports', 'other'],
     required: [true, 'Category is required']
   },
   organizer: {

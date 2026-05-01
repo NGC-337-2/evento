@@ -174,118 +174,145 @@ const OrganiserDashboard = () => {
             <dl className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <StatCard 
                     icon={<DollarSign />} 
-                    label="Total Revenue" 
+                    label="Total views" 
                     value={`$${stats.summary.totalRevenue.toLocaleString()}`} 
-                    subValue="+12% from last month"
+                    subValue="0.43% ↑"
                     trend="up"
-                    color="text-green-600 dark:text-green-400" 
-                    bg="bg-green-100 dark:bg-green-900/20"
+                    color="text-primary-600" 
                 />
                 <StatCard 
                     icon={<Users />} 
-                    label="Tickets Sold" 
-                    value={stats.summary.totalTickets.toString()} 
-                    subValue={`${stats.summary.totalEvents} active events`}
-                    trend="neutral"
-                    color="text-blue-600 dark:text-blue-400" 
-                    bg="bg-blue-100 dark:bg-blue-900/20"
+                    label="Total Profit" 
+                    value={`$${(stats.summary.totalRevenue * 0.8).toLocaleString()}`} 
+                    subValue="4.35% ↑"
+                    trend="up"
+                    color="text-[#10B981]" 
                 />
                 <StatCard 
                     icon={<TrendingUp />} 
-                    label="Avg. Capacity" 
-                    value={`${Math.round(stats.events.reduce((sum, e) => sum + (e.totalSold/e.totalCapacity*100), 0) / stats.events.length || 0)}%`} 
-                    subValue="Across all events"
+                    label="Total Product" 
+                    value={stats.summary.totalEvents.toString()} 
+                    subValue="2.59% ↑"
                     trend="up"
-                    color="text-purple-600 dark:text-purple-400" 
-                    bg="bg-purple-100 dark:bg-purple-900/20"
+                    color="text-[#3C50E0]" 
                 />
             </dl>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="mt-7.5 grid grid-cols-12 gap-4 md:gap-6 2xl:gap-7.5">
                 {/* Revenue Chart */}
-                <div className="rounded-2xl bg-white dark:bg-secondary-800 p-6 shadow-sm ring-1 ring-secondary-900/5 dark:ring-white/10 h-[400px]">
-                    <h3 className="text-base font-semibold leading-6 text-secondary-900 dark:text-white flex items-center gap-2 mb-6">
-                        <BarChart3 className="w-5 h-5 text-secondary-400" /> Revenue Growth (30D)
-                    </h3>
-                    <div className="w-full h-[300px]">
+                <div className="col-span-12 rounded-sm border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:col-span-8">
+                    <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap">
+                        <div className="flex w-full flex-wrap gap-3 sm:gap-5">
+                            <div className="flex min-w-47.5">
+                                <span className="mt-1 mr-2 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-primary-600">
+                                    <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-primary-600"></span>
+                                </span>
+                                <div className="w-full">
+                                    <p className="font-semibold text-primary-600">Total Revenue</p>
+                                    <p className="text-sm font-medium">12.04.2022 - 12.05.2022</p>
+                                </div>
+                            </div>
+                            <div className="flex min-w-47.5">
+                                <span className="mt-1 mr-2 flex h-4 w-full max-w-4 items-center justify-center rounded-full border border-secondary-400">
+                                    <span className="block h-2.5 w-full max-w-2.5 rounded-full bg-secondary-400"></span>
+                                </span>
+                                <div className="w-full">
+                                    <p className="font-semibold text-secondary-400">Total Sales</p>
+                                    <p className="text-sm font-medium">12.04.2022 - 12.05.2022</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex w-full max-w-45 justify-end">
+                            <div className="inline-flex items-center rounded-md bg-whiter p-1.5 dark:bg-meta-4">
+                                <button className="rounded bg-white py-1 px-3 text-xs font-medium text-black shadow-card hover:bg-white hover:shadow-card dark:bg-boxdark dark:text-white dark:hover:bg-boxdark">
+                                    Day
+                                </button>
+                                <button className="rounded py-1 px-3 text-xs font-medium text-black hover:bg-white hover:shadow-card dark:text-white dark:hover:bg-boxdark">
+                                    Week
+                                </button>
+                                <button className="rounded py-1 px-3 text-xs font-medium text-black hover:bg-white hover:shadow-card dark:text-white dark:hover:bg-boxdark">
+                                    Month
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="w-full h-[350px]">
                         {stats.chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={stats.chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                <LineChart data={stats.chartData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.2} />
                                     <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val.split('-')[2]} stroke="#94a3b8" />
                                     <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} stroke="#94a3b8" />
                                     <RechartsTooltip 
                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Line type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3, fill: '#4f46e5' }} activeDot={{ r: 5, strokeWidth: 0 }} />
+                                    <Line type="monotone" dataKey="revenue" stroke="#3C50E0" strokeWidth={2} dot={{ r: 4, fill: '#3C50E0' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                    <Line type="monotone" dataKey="tickets" stroke="#80CAEE" strokeWidth={2} dot={{ r: 4, fill: '#80CAEE' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex items-center justify-center h-full text-secondary-400 italic text-sm">No revenue data for the selected period</div>
+                            <div className="flex items-center justify-center h-full text-secondary-400 italic text-sm">No revenue data available</div>
                         )}
                     </div>
                 </div>
 
-                {/* Category Distribution */}
-                <div className="rounded-2xl bg-white dark:bg-secondary-800 p-6 shadow-sm ring-1 ring-secondary-900/5 dark:ring-white/10 h-[400px]">
-                    <h3 className="text-base font-semibold leading-6 text-secondary-900 dark:text-white flex items-center gap-2 mb-6">
-                        <PieChartIcon className="w-5 h-5 text-secondary-400" /> Category Distribution
-                    </h3>
-                    <div className="w-full h-[300px]">
-                        {stats.categoryData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={stats.categoryData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {stats.categoryData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-secondary-400 italic text-sm">No category data available</div>
-                        )}
+                {/* Profit Chart */}
+                <div className="col-span-12 rounded-sm border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:col-span-4">
+                    <div className="mb-4 justify-between gap-4 sm:flex">
+                        <div>
+                            <h4 className="text-xl font-bold text-black dark:text-white">Profit this week</h4>
+                        </div>
+                        <div>
+                            <select className="relative z-20 inline-flex appearance-none bg-transparent py-1 pl-3 pr-8 text-sm font-medium outline-none">
+                                <option value="">This Week</option>
+                                <option value="">Last Week</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="w-full h-[350px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats.chartData.slice(-7)} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.2} />
+                                <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => val.split('-')[2]} stroke="#94a3b8" />
+                                <YAxis hide />
+                                <RechartsTooltip cursor={{fill: 'transparent'}} />
+                                <Bar dataKey="revenue" fill="#3C50E0" radius={[4, 4, 0, 0]} barSize={12} />
+                                <Bar dataKey="tickets" fill="#80CAEE" radius={[4, 4, 0, 0]} barSize={12} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
             {/* Event Performance Table */}
-            <div className="rounded-2xl bg-white dark:bg-secondary-800 shadow-sm ring-1 ring-secondary-900/5 dark:ring-white/10">
-                <div className="border-b border-secondary-200 dark:border-secondary-700 px-6 py-5">
-                    <h3 className="text-base font-semibold leading-6 text-secondary-900 dark:text-white">Event Performance</h3>
+            <div className="mt-4 rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="py-6 px-4 md:px-6 xl:px-7.5 border-b border-stroke dark:border-strokedark">
+                    <h4 className="text-xl font-bold text-black dark:text-white">Event Performance</h4>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-secondary-300 dark:divide-secondary-700">
+                    <table className="min-w-full divide-y divide-stroke dark:divide-strokedark">
                         <thead>
-                            <tr>
-                                <th scope="col" className="py-3.5 pl-6 pr-3 text-left text-sm font-semibold text-secondary-900 dark:text-white">
+                            <tr className="bg-gray-2 dark:bg-meta-4">
+                                <th scope="col" className="py-4 pl-6 pr-3 text-left text-sm font-semibold uppercase text-secondary-600 dark:text-secondary-400">
                                     Event Details
                                 </th>
-                                <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-secondary-900 dark:text-white">
+                                <th scope="col" className="px-3 py-4 text-center text-sm font-semibold uppercase text-secondary-600 dark:text-secondary-400">
                                     Status
                                 </th>
-                                <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-secondary-900 dark:text-white">
+                                <th scope="col" className="px-3 py-4 text-center text-sm font-semibold uppercase text-secondary-600 dark:text-secondary-400">
                                     Sales
                                 </th>
-                                <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-secondary-900 dark:text-white">
+                                <th scope="col" className="px-3 py-4 text-right text-sm font-semibold uppercase text-secondary-600 dark:text-secondary-400">
                                     Revenue
                                 </th>
-                                <th scope="col" className="relative py-3.5 pl-3 pr-6">
+                                <th scope="col" className="relative py-4 pl-3 pr-6">
                                     <span className="sr-only">Actions</span>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-secondary-200 dark:divide-secondary-700 bg-white dark:bg-secondary-800">
+                        <tbody className="divide-y divide-stroke dark:divide-strokedark bg-white dark:bg-boxdark">
                             {stats.events.map(event => (
                                 <tr key={event._id} className="hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors">
                                     <td className="whitespace-nowrap py-5 pl-6 pr-3 text-sm">
@@ -541,27 +568,28 @@ const OrganiserDashboard = () => {
     );
 };
 
-const StatCard = ({ icon, label, value, subValue, color, bg }) => {
+const StatCard = ({ icon, label, value, subValue, trend, color, bg }) => {
     return (
-        <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-secondary-800 px-4 pb-12 pt-5 shadow-sm ring-1 ring-secondary-900/5 dark:ring-white/10 sm:px-6 sm:pt-6">
-            <dt>
-                <div className={`absolute rounded-md p-3 ${bg}`}>
-                    <div className={`h-6 w-6 ${color}`}>
-                        {icon}
-                    </div>
+        <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+            <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
+                <div className={`${color}`}>
+                    {icon}
                 </div>
-                <p className="ml-16 truncate text-sm font-medium text-secondary-500 dark:text-secondary-400">{label}</p>
-            </dt>
-            <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                <p className="text-2xl font-semibold text-secondary-900 dark:text-white">{value}</p>
-                <div className="absolute inset-x-0 bottom-0 bg-secondary-50 dark:bg-secondary-900/50 px-4 py-4 sm:px-6">
-                    <div className="text-sm">
-                        <span className="font-medium text-secondary-500 dark:text-secondary-400">
-                            {subValue}
-                        </span>
-                    </div>
+            </div>
+
+            <div className="mt-4 flex items-end justify-between">
+                <div>
+                    <h4 className="text-title-md font-bold text-black dark:text-white">
+                        {value}
+                    </h4>
+                    <span className="text-sm font-medium">{label}</span>
                 </div>
-            </dd>
+
+                <span className={`flex items-center gap-1 text-sm font-medium ${trend === 'up' ? 'text-meta-3' : trend === 'down' ? 'text-meta-1' : 'text-secondary-500'}`}>
+                    {subValue}
+                    {trend === 'up' && <svg className="fill-meta-3" width="10" height="11" viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.35714 0.847337L0.589741 4.86454C0.441277 5.02258 0.441277 5.27883 0.589741 5.43687L0.917457 5.78586C1.06592 5.9439 1.30613 5.9439 1.4546 5.78586L4.28571 2.77127L4.28571 9.94156C4.28571 10.1639 4.46218 10.3439 4.67857 10.3439L5.32143 10.3439C5.53782 10.3439 5.71429 10.1639 5.71429 9.94156L5.71429 2.77127L8.5454 5.78586C8.69387 5.9439 8.93408 5.9439 9.08254 5.78586L9.41026 5.43687C9.55872 5.27883 9.55872 5.02258 9.41026 4.86454L5.64286 0.847337C5.49439 0.6893 5.25418 0.6893 5.10571 0.847337L4.67857 1.30232L4.35714 0.847337Z" fill="" /></svg>}
+                </span>
+            </div>
         </div>
     );
 };

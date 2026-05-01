@@ -104,16 +104,18 @@ const EventForm = ({ initialData, onSubmit, isLoading }) => {
                 Category *
               </label>
               <div className="mt-2">
-                <select
+                <input
+                  list="categories"
                   id="category"
                   className="block w-full rounded-md border-0 py-1.5 text-secondary-900 dark:text-white shadow-sm ring-1 ring-inset ring-secondary-300 dark:ring-secondary-700 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:max-w-xs sm:text-sm sm:leading-6 bg-white dark:bg-secondary-900"
+                  placeholder="Select or type category"
                   {...register("category", { required: "Category is required" })}
-                >
-                  <option value="">Select a category</option>
+                />
+                <datalist id="categories">
                   {FRONTEND_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat} className="capitalize">{cat}</option>
+                    <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
                   ))}
-                </select>
+                </datalist>
                 {errors.category && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.category.message}</p>}
               </div>
             </div>

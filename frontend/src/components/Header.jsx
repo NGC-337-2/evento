@@ -6,9 +6,10 @@ import { toggleTheme } from '../features/ui/uiSlice';
 import { Menu, MenuButton, MenuItem, MenuItems, Dialog, DialogPanel } from '@headlessui/react';
 import { Calendar, User, LogOut, Sun, Moon, Layout, Menu as MenuIcon, X } from 'lucide-react';
 
+import CategoryDropdown from './CategoryDropdown';
+
 const navigation = [
-  { name: 'Discover', href: '/explore' },
-  { name: 'Categories', href: '/explore' },
+  // Discover and Categories removed as requested
 ];
 
 const Header = () => {
@@ -49,20 +50,18 @@ const Header = () => {
         </div>
         
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex lg:gap-x-8">
-          {navigation.map((item) => (
-            <Link 
-              key={item.name} 
-              to={item.href} 
-              className={`text-sm font-semibold leading-6 ${
-                isCurrentPage(item.href) 
-                  ? 'text-primary-600 dark:text-primary-400' 
-                  : 'text-secondary-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400'
-              }`}
-            >
-              {item.name}
-            </Link>
-          ))}
+        <div className="hidden lg:flex lg:gap-x-8 lg:items-center">
+          <Link 
+            to="/explore" 
+            className={`text-sm font-semibold leading-6 ${
+              isCurrentPage('/explore') 
+                ? 'text-primary-600 dark:text-primary-400' 
+                : 'text-secondary-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400'
+            }`}
+          >
+            Explore Events
+          </Link>
+          <CategoryDropdown />
           {(user?.role === 'organizer' || user?.role === 'admin') && (
             <Link 
               to="/dashboard" 
@@ -161,18 +160,18 @@ const Header = () => {
           <div className="mt-6 flow-root">
             <div className="-my-6 divide-y divide-secondary-200 dark:divide-secondary-800">
               <div className="space-y-2 py-6">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 hover:bg-secondary-50 dark:hover:bg-secondary-800 ${
-                      isCurrentPage(item.href) ? 'text-primary-600 dark:text-primary-400' : 'text-secondary-900 dark:text-white'
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
+                <Link
+                  to="/explore"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 hover:bg-secondary-50 dark:hover:bg-secondary-800 ${
+                    isCurrentPage('/explore') ? 'text-primary-600 dark:text-primary-400' : 'text-secondary-900 dark:text-white'
+                  }`}
+                >
+                  Explore Events
+                </Link>
+                <div className="px-3 py-2">
+                   <CategoryDropdown />
+                </div>
                 {(user?.role === 'organizer' || user?.role === 'admin') && (
                   <Link
                     to="/dashboard"

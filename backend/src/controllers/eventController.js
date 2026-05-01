@@ -140,35 +140,59 @@ exports.getMyEvents = async (req, res) => {
 // @route   POST /api/v1/events
 // @access  Private (Organizer/Admin)
 exports.createEvent = async (req, res) => {
-  let imageUrl = null;
-  
   try {
+    let imageUrl = null;
+    
+    // 1. Handle Image Upload
     if (req.file) {
-      logger.info('☁️ Attempting Cloudinary upload...');
-      const result = await uploadToCloudinary(req.file.buffer, 'evento/events');
-      imageUrl = result.secure_url;
-      logger.info('✅ Cloudinary upload successful');
+      try {
+        logger.info('☁️ Attempting Cloudinary upload...');
+        const result = await uploadToCloudinary(req.file.buffer, 'evento/events');
+        imageUrl = result.secure_url;
+        logger.info('✅ Cloudinary upload successful');
+      } catch (cloudErr) {
+        logger.error('❌ Cloudinary upload failed', cloudErr);
+        const err = new Error(`Image upload failed: ${cloudErr.message}`);
+        err.statusCode = 400;
+        throw err;
+      }
     }
-  } catch (cloudErr) {
-    logger.error('❌ Cloudinary upload failed in controller', cloudErr);
-    // Optionally continue without image or throw a 400
-    const err = new Error(`Image upload failed: ${cloudErr.message}`);
-    err.statusCode = 400;
-    throw err;
-  }
 
-  try {
-    logger.info('💾 Saving event to database...', { body: req.body });
-    const event = await Event.create({
+    // 2. Prepare Event Data
+    logger.info('💾 Preparing to save event...', { title: req.body.title });
+    
+    // Ensure numeric fields are actually numbers
+    const eventData = {
       ...req.body,
       organizer: req.user._id,
       image: imageUrl,
-    });
+      capacity: Number(req.body.capacity),
+    };
+
+    // 3. Save to Database
+    const event = await Event.create(eventData);
+    
     logger.info('✅ Event created successfully', { eventId: event._id });
     res.status(201).json({ success: true, data: event });
-  } catch (dbErr) {
-    logger.error('❌ Database save failed', dbErr);
-    throw dbErr; // Will be caught by global handler
+
+  } catch (error) {
+    logger.error('💥 Critical failure in createEvent:', error);
+    
+    // If it's a Mongoose validation error, return 400
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: Object.values(error.errors).map(e => e.message).join(', ')
+      });
+    }
+
+    // Otherwise, propagate the error (or return 500 if no status)
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Internal Server Error',
+      requestId: req.id
+    });
   }
 };
 
