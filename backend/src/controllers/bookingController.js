@@ -4,6 +4,7 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const { BOOKING_STATUS, EVENT_STATUS } = require('../config/constants');
 const { sendBookingConfirmation, sendBookingCancellation } = require('../services/emailService');
+const { logAudit } = require('../utils/audit');
 const logger = require('../config/logger');
 
 // @desc    Create new booking checkout session
@@ -118,30 +119,38 @@ exports.createBooking = async (req, res) => {
   // Handle Paid Tickets with Stripe Checkout
   const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
   
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: lineItems,
-    mode: 'payment',
-    success_url: `${frontendUrl}/booking-success?session_id={CHECKOUT_SESSION_ID}&bookingId=${booking._id}`,
-    cancel_url: `${frontendUrl}/event/${event._id}?payment=cancelled`,
-    client_reference_id: booking._id.toString(),
-    customer_email: req.user.email,
-    metadata: {
-        bookingId: booking._id.toString(),
-        userId: req.user._id.toString(),
-        eventId: event._id.toString()
-    }
-  });
+  try {
+    logger.info('💳 Creating Stripe checkout session...', { bookingId: booking._id });
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${frontendUrl}/booking-success?session_id={CHECKOUT_SESSION_ID}&bookingId=${booking._id}`,
+      cancel_url: `${frontendUrl}/event/${event._id}?payment=cancelled`,
+      client_reference_id: booking._id.toString(),
+      customer_email: req.user.email,
+      metadata: {
+          bookingId: booking._id.toString(),
+          userId: req.user._id.toString(),
+          eventId: event._id.toString()
+      }
+    });
 
-  // Save payment intent to booking
-  booking.paymentIntentId = session.id;
-  await booking.save();
+    // Save payment intent to booking
+    booking.paymentIntentId = session.id;
+    await booking.save();
 
-  res.status(200).json({
-    success: true,
-    message: 'Redirect to Stripe checkout',
-    data: { url: session.url, bookingId: booking._id }
-  });
+    res.status(200).json({
+      success: true,
+      message: 'Redirect to Stripe checkout',
+      data: { url: session.url, bookingId: booking._id }
+    });
+  } catch (stripeErr) {
+    logger.error('❌ Stripe checkout failed', stripeErr);
+    const err = new Error(`Checkout failed: ${stripeErr.message}`);
+    err.statusCode = 400;
+    throw err;
+  }
 };
 
 // @desc    Get all bookings for logged-in user
@@ -164,7 +173,7 @@ exports.getUserBookings = async (req, res) => {
 // @access  Private
 exports.getBookingById = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
-        .populate('event', 'title date location venue capacity organiser organizer')
+        .populate('event', 'title date location venue capacity organizer')
         .populate('user', 'name email');
     
     if (!booking) {
@@ -231,6 +240,11 @@ exports.cancelBooking = async (req, res) => {
     await event.save();
     await booking.save();
 
+    // Log audit if cancelled by admin
+    if (req.user.role === 'admin') {
+        await logAudit(req, 'CANCEL_BOOKING', 'Booking', booking._id, { eventTitle: event.title });
+    }
+
     // Send Cancellation Email
     await sendBookingCancellation(req.user.email, event);
 
@@ -253,7 +267,73 @@ exports.getAllBookings = async (req, res) => {
   res.status(200).json({ success: true, count: bookings.length, data: bookings });
 };
 
+// @desc    Get all attendees for a specific event (Organizer/Admin)
+// @route   GET /api/v1/bookings/event/:eventId
+// @access  Private (Owner/Admin)
+exports.getEventAttendees = async (req, res) => {
+    const event = await Event.findById(req.params.eventId);
+    if (!event) {
+        const err = new Error('Event not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Authorization
+    if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        const err = new Error('Not authorized to view bookings for this event');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    const bookings = await Booking.find({ event: req.params.eventId })
+        .populate('user', 'name email profileImage')
+        .sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        count: bookings.length,
+        data: bookings
+    });
+};
+
+// @desc    Check-in attendee (Manual or QR)
+// @route   PATCH /api/v1/bookings/:id/check-in
+// @access  Private (Organizer/Admin)
+exports.checkInAttendee = async (req, res) => {
+    const booking = await Booking.findById(req.params.id).populate('event');
+    if (!booking) {
+        const err = new Error('Booking not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Authorization
+    if (booking.event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        const err = new Error('Not authorized to perform check-in');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    if (booking.status !== BOOKING_STATUS.CONFIRMED) {
+        const err = new Error(`Cannot check-in booking with status: ${booking.status}`);
+        err.statusCode = 400;
+        throw err;
+    }
+
+    // Update check-in status (assume model has checkedIn field, if not we add it)
+    booking.checkedIn = true;
+    booking.checkedInAt = new Date();
+    await booking.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Attendee checked in successfully',
+        data: booking
+    });
+};
+
 // @desc    Stripe Webhook Handler
+// @route   POST /api/v1/bookings/webhook
 exports.stripeWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;

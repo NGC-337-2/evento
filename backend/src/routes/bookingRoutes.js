@@ -43,6 +43,18 @@ router.put('/:id/cancel', protect, bookingController.cancelBooking);
 const { authorize } = require('../middleware/auth');
 router.get('/admin/all', protect, authorize('admin'), bookingController.getAllBookings);
 
+// ─── Organizer Routes ────────────────────────────────────────────────────────
+
+// @route   GET /api/v1/bookings/event/:eventId
+// @desc    Get all attendees for a specific event
+// @access  Private/Organizer/Admin
+router.get('/event/:eventId', protect, authorize('organizer', 'admin'), bookingController.getEventAttendees);
+
+// @route   PATCH /api/v1/bookings/:id/check-in
+// @desc    Check-in attendee
+// @access  Private/Organizer/Admin
+router.patch('/:id/check-in', protect, authorize('organizer', 'admin'), bookingController.checkInAttendee);
+
 // ⚠️ Note: Stripe webhook route is registered directly in server.js
 // at '/api/v1/bookings/webhook' to use raw body parsing & verify signatures.
 

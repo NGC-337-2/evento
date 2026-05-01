@@ -1,6 +1,6 @@
-// src/controllers/userController.js
 const User = require('../models/User');
 const { ROLES } = require('../config/constants');
+const { logAudit } = require('../utils/audit');
 const logger = require('../config/logger');
 
 // @desc    Get user profile by ID
@@ -29,7 +29,7 @@ exports.getUserById = async (req, res) => {
 // @route   PUT /api/v1/users/:id
 // @access  Private (Self)
 exports.updateUser = async (req, res) => {
-  if (req.user._id.toString() !== req.params.id) {
+  if (req.user._id.toString() !== req.params.id && req.user.role !== ROLES.ADMIN) {
     const err = new Error('Not authorized to update this profile');
     err.statusCode = 403;
     throw err;
@@ -117,6 +117,7 @@ exports.deleteUser = async (req, res) => {
   } else {
     // Admins: Hard delete
     await user.deleteOne();
+    await logAudit(req, 'DELETE_USER', 'User', user._id, { name: user.name, email: user.email });
   }
 
   res.status(200).json({ success: true, message: 'Account deleted successfully' });
@@ -149,5 +150,56 @@ exports.getAllUsers = async (req, res) => {
       pages: Math.ceil(total / limit),
     },
     data: users,
+  });
+};
+
+// @desc    Toggle saving an event (Bookmark)
+// @route   PATCH /api/v1/users/save-event/:eventId
+// @access  Private
+exports.toggleSaveEvent = async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const eventId = req.params.eventId;
+
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const isSaved = user.savedEvents.includes(eventId);
+
+  if (isSaved) {
+    // Remove if already saved
+    user.savedEvents = user.savedEvents.filter(id => id.toString() !== eventId);
+  } else {
+    // Add if not saved
+    user.savedEvents.push(eventId);
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: isSaved ? 'Event removed from saved items' : 'Event saved successfully',
+    data: user.savedEvents
+  });
+};
+
+// @desc    Get all saved events for current user
+// @route   GET /api/v1/users/saved-events
+// @access  Private
+exports.getSavedEvents = async (req, res) => {
+  const user = await User.findById(req.user._id).populate('savedEvents');
+
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  res.status(200).json({
+    success: true,
+    count: user.savedEvents.length,
+    data: user.savedEvents
   });
 };

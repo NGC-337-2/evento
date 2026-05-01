@@ -8,6 +8,16 @@ const { protect, authorize } = require('../middleware/auth');
 
 // ─── Protected Routes (Requires Authentication) ───────────────────────────────
 
+// @route   GET /api/v1/users/saved-events
+// @desc    Get all saved events for current user
+// @access  Private
+router.get('/saved-events', protect, userController.getSavedEvents);
+
+// @route   PATCH /api/v1/users/save-event/:eventId
+// @desc    Toggle saving an event
+// @access  Private
+router.patch('/save-event/:eventId', protect, userController.toggleSaveEvent);
+
 // @route   GET /api/v1/users/:id
 // @desc    Get user profile by ID (Admin or self)
 // @access  Private

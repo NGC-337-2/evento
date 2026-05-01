@@ -4,32 +4,28 @@
 
 @layer base {
   body {
-    @apply bg-secondary-50 text-secondary-900 antialiased;
+    @apply bg-secondary-50 text-secondary-900 antialiased transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-secondary-900 text-secondary-50;
   }
 }
 
-@layer components {
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-50;
-  }
-  
-  .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 shadow-sm;
-  }
-  
-  .btn-outline {
-    @apply border border-secondary-300 bg-transparent hover:bg-secondary-100 text-secondary-900;
-  }
-  
-  .btn-ghost {
-    @apply hover:bg-secondary-100 hover:text-secondary-900;
-  }
 
-  .input-field {
-    @apply flex h-10 w-full rounded-md border border-secondary-300 bg-white px-3 py-2 text-sm placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  
-  .card {
-    @apply rounded-xl border border-secondary-200 bg-white shadow-sm;
-  }
+@layer components {
+  /* Utility classes removed to use Tailwind Plus UI patterns */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-secondary-100 dark:bg-secondary-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-secondary-300 dark:bg-secondary-700 rounded-full hover:bg-secondary-400 dark:hover:bg-secondary-600 transition-colors;
 }

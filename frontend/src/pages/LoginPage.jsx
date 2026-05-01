@@ -56,58 +56,104 @@ const LoginPage = () => {
   };
 
   if (isLoading) {
-    return <Spinner />;
+    return <Spinner fullScreen />;
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 flex-grow flex items-center justify-center">
-      <div className="card w-full max-w-md p-8 dark:bg-secondary-800 dark:border-secondary-700">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-secondary-900 dark:text-white">Welcome back</h1>
-          <p className="text-sm text-secondary-500 dark:text-secondary-400 mt-2">Enter your credentials to access your account</p>
-        </div>
-        
-        <form onSubmit={onSubmit} className="space-y-4">
+    <div className="flex min-h-full flex-1">
+      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+        <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
-            <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1" htmlFor="email">Email</label>
-            <input 
-              id="email" 
-              type="email" 
-              autoComplete="email"
-              className="input-field dark:bg-secondary-900 dark:border-secondary-700 dark:text-white" 
-              placeholder="you@example.com"
-              value={email}
-              onChange={onChange}
-              required
-            />
-
+            <h2 className="mt-8 text-2xl font-bold leading-9 tracking-tight text-secondary-900 dark:text-white">
+              Sign in to your account
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-secondary-500 dark:text-secondary-400">
+              Not a member?{' '}
+              <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+                Start a 14 day free trial
+              </Link>
+            </p>
           </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300" htmlFor="password">Password</label>
-              <a href="#" className="text-xs text-primary-600 dark:text-primary-400 hover:underline">Forgot password?</a>
+
+          <div className="mt-10">
+            <div>
+              <form onSubmit={onSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                    Email address
+                  </label>
+                  <div className="mt-2">
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={onChange}
+                      className="block w-full rounded-md border-0 py-1.5 text-secondary-900 dark:text-white dark:bg-secondary-800 shadow-sm ring-1 ring-inset ring-secondary-300 dark:ring-secondary-700 placeholder:text-secondary-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium leading-6 text-secondary-900 dark:text-white">
+                    Password
+                  </label>
+                  <div className="mt-2">
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={onChange}
+                      className="block w-full rounded-md border-0 py-1.5 text-secondary-900 dark:text-white dark:bg-secondary-800 shadow-sm ring-1 ring-inset ring-secondary-300 dark:ring-secondary-700 placeholder:text-secondary-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <input
+                      id="remember-me"
+                      name="remember-me"
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-600 dark:border-secondary-700 dark:bg-secondary-800 dark:checked:bg-primary-600"
+                    />
+                    <label htmlFor="remember-me" className="ml-3 block text-sm leading-6 text-secondary-900 dark:text-secondary-300">
+                      Remember me
+                    </label>
+                  </div>
+
+                  <div className="text-sm leading-6">
+                    <a href="#" className="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    className="flex w-full justify-center rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                  >
+                    Sign in
+                  </button>
+                </div>
+              </form>
             </div>
-            <input 
-              id="password" 
-              type="password" 
-              autoComplete="current-password"
-              className="input-field dark:bg-secondary-900 dark:border-secondary-700 dark:text-white" 
-              placeholder="••••••••"
-              value={password}
-              onChange={onChange}
-              required
-            />
-
           </div>
-          
-          <button type="submit" className="btn btn-primary w-full h-10 mt-6" disabled={isLoading}>
-            {isLoading ? 'Logging In...' : 'Log In'}
-          </button>
-        </form>
-        
-        <p className="text-center text-sm text-secondary-500 dark:text-secondary-400 mt-6">
-          Don't have an account? <Link to="/register" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">Sign up</Link>
-        </p>
+        </div>
+      </div>
+      <div className="relative hidden w-0 flex-1 lg:block">
+        <img
+          className="absolute inset-0 h-full w-full object-cover"
+          src="https://images.unsplash.com/photo-1496917756835-20cb06e75b4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1908&q=80"
+          alt=""
+        />
+        <div className="absolute inset-0 bg-primary-600 mix-blend-multiply" aria-hidden="true" />
       </div>
     </div>
   );

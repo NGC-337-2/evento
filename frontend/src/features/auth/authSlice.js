@@ -106,9 +106,27 @@ export const authSlice = createSlice({
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
-      });
+        state.token = null;
+      })
+      .addMatcher(
+        (action) => action.type === 'users/updateProfile/fulfilled',
+        (state, action) => {
+          state.user = action.payload.data;
+          localStorage.setItem('evento_user', JSON.stringify(action.payload.data));
+        }
+      )
+      .addMatcher(
+        (action) => action.type === 'users/toggleSaveEvent/fulfilled',
+        (state, action) => {
+          if (state.user) {
+            state.user.savedEvents = action.payload.data;
+            localStorage.setItem('evento_user', JSON.stringify(state.user));
+          }
+        }
+      );
   },
 });
+
 
 export const { reset } = authSlice.actions;
 export default authSlice.reducer;

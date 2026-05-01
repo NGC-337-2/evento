@@ -47,6 +47,24 @@ const connectDB = async () => {
     });
 
     logger.info(`🔗 Successfully connected to MongoDB: ${conn.connection.host}/${conn.connection.name}`);
+    
+    // 🩹 Aggressive Self-healing: Drop legacy unique index on ticketCodes
+    try {
+      const bookingsCollection = conn.connection.db.collection('bookings');
+      const indexes = await bookingsCollection.indexes();
+      const hasBadIndex = indexes.some(idx => idx.name === 'ticketCodes_1');
+      
+      if (hasBadIndex) {
+        logger.info('🔍 Found legacy ticketCodes_1 index. Dropping it...');
+        await bookingsCollection.dropIndex('ticketCodes_1');
+        logger.info('🗑️ Successfully dropped legacy index.');
+      } else {
+        logger.info('✅ No legacy ticketCodes_1 index found.');
+      }
+    } catch (e) {
+      logger.warn('⚠️ Could not check/drop legacy index (it may already be gone):', e.message);
+    }
+
     retries = 0;
     return conn.connection;
   } catch (error) {

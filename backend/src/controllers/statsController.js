@@ -137,17 +137,29 @@ exports.getOrganizerStats = async (req, res) => {
             return {
                 _id: e._id,
                 title: e.title,
+                date: e.date,
+                category: e.category,
+                status: e.status,
                 totalSold: eventBookings.reduce((sum, b) => sum + (b.quantity || 0), 0),
                 totalCapacity: e.capacity,
-                revenue: eventBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0)
+                revenue: eventBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0),
+                bookingsCount: eventBookings.length
             };
         });
+
+        // Category distribution
+        const categories = {};
+        events.forEach(e => {
+            categories[e.category] = (categories[e.category] || 0) + 1;
+        });
+        const categoryData = Object.keys(categories).map(cat => ({ name: cat, value: categories[cat] }));
 
         res.status(200).json({
             success: true,
             data: {
                 summary: { totalTickets, totalRevenue, totalEvents: events.length },
                 chartData,
+                categoryData,
                 events: eventPerformance
             }
         });

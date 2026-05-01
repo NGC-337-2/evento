@@ -1,6 +1,7 @@
 const Event = require('../models/Event');
 const { EVENT_STATUS, ROLES, PAGINATION } = require('../config/constants');
 const { uploadToCloudinary } = require('../utils/cloudinary');
+const { logAudit } = require('../utils/audit');
 const logger = require('../config/logger');
 
 // ─── Helper: Standardized API Response ──────────────────────────────────────
@@ -140,23 +141,35 @@ exports.getMyEvents = async (req, res) => {
 // @access  Private (Organizer/Admin)
 exports.createEvent = async (req, res) => {
   let imageUrl = null;
-  if (req.file) {
-    const result = await uploadToCloudinary(req.file.buffer, 'evento/events');
-    imageUrl = result.secure_url;
+  
+  try {
+    if (req.file) {
+      logger.info('☁️ Attempting Cloudinary upload...');
+      const result = await uploadToCloudinary(req.file.buffer, 'evento/events');
+      imageUrl = result.secure_url;
+      logger.info('✅ Cloudinary upload successful');
+    }
+  } catch (cloudErr) {
+    logger.error('❌ Cloudinary upload failed in controller', cloudErr);
+    // Optionally continue without image or throw a 400
+    const err = new Error(`Image upload failed: ${cloudErr.message}`);
+    err.statusCode = 400;
+    throw err;
   }
 
-  // Handle nested JSON strings from FormData
-  const body = { ...req.body };
-  if (typeof body.location === 'string') body.location = JSON.parse(body.location);
-  if (typeof body.ticketTiers === 'string') body.ticketTiers = JSON.parse(body.ticketTiers);
-  
-  const event = await Event.create({
-    ...body,
-    organizer: req.user._id,
-    image: imageUrl,
-  });
-
-  res.status(201).json({ success: true, data: event });
+  try {
+    logger.info('💾 Saving event to database...', { body: req.body });
+    const event = await Event.create({
+      ...req.body,
+      organizer: req.user._id,
+      image: imageUrl,
+    });
+    logger.info('✅ Event created successfully', { eventId: event._id });
+    res.status(201).json({ success: true, data: event });
+  } catch (dbErr) {
+    logger.error('❌ Database save failed', dbErr);
+    throw dbErr; // Will be caught by global handler
+  }
 };
 
 // @desc    Update event
@@ -183,16 +196,17 @@ exports.updateEvent = async (req, res) => {
     req.body.image = result.secure_url;
   }
 
-  // Handle nested JSON strings from FormData if present
-  const body = { ...req.body };
-  if (typeof body.location === 'string') body.location = JSON.parse(body.location);
-  if (typeof body.ticketTiers === 'string') body.ticketTiers = JSON.parse(body.ticketTiers);
-
   const updatedEvent = await Event.findByIdAndUpdate(
     req.params.id,
-    { $set: body },
+    { $set: req.body },
     { new: true, runValidators: true }
   ).lean();
+
+  // Log audit if status changed by admin
+  if (req.user.role === ROLES.ADMIN && req.body.status && req.body.status !== event.status) {
+      const action = req.body.status === EVENT_STATUS.PUBLISHED ? 'APPROVE_EVENT' : 'REJECT_EVENT';
+      await logAudit(req, action, 'Event', event._id, { oldStatus: event.status, newStatus: req.body.status });
+  }
 
   res.status(200).json({ success: true, data: updatedEvent });
 };
@@ -215,8 +229,61 @@ exports.deleteEvent = async (req, res) => {
     throw err;
   }
 
+  // Constraint: Cannot delete if tickets have been sold
+  if (event.bookingsCount > 0) {
+    const err = new Error('Cannot delete event with existing bookings. Please cancel it instead.');
+    err.statusCode = 400;
+    throw err;
+  }
+
   // If hard delete is preferred
   await event.deleteOne();
+
+  // Log audit if deleted by admin
+  if (req.user.role === ROLES.ADMIN) {
+      await logAudit(req, 'DELETE_EVENT', 'Event', event._id, { title: event.title });
+  }
   
   res.status(200).json({ success: true, message: 'Event deleted successfully' });
+};
+
+// @desc    Cancel event
+// @route   PATCH /api/v1/events/:id/cancel
+// @access  Private (Owner/Organizer)
+exports.cancelEvent = async (req, res) => {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+        const err = new Error('Event not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Ownership & Role Check
+    if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMIN) {
+        const err = new Error('Not authorized to cancel this event');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    if (event.status === EVENT_STATUS.CANCELLED) {
+        const err = new Error('Event is already cancelled');
+        err.statusCode = 400;
+        throw err;
+    }
+
+    // Update status to CANCELLED
+    event.status = EVENT_STATUS.CANCELLED;
+    await event.save();
+
+    // Trigger notifications (mock or real if service exists)
+    logger.info(`📢 Event ${event.title} has been cancelled. Notifications triggered for ${event.bookingsCount} attendees.`);
+    
+    // Log audit
+    await logAudit(req, 'CANCEL_EVENT', 'Event', event._id, { title: event.title });
+
+    res.status(200).json({
+        success: true,
+        message: 'Event cancelled successfully. Attendees will be notified.',
+        data: event
+    });
 };

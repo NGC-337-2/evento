@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, Fragment } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getEvents, setFilters } from '../features/events/eventsSlice';
 import EventCard from '../components/EventCard';
-import { Search, Filter } from 'lucide-react';
+import { Skeleton } from '../components/Spinner';
+import { Search, Filter, ChevronDown, Check } from 'lucide-react';
+import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react';
 
 const EVENT_CATEGORIES = [
   'music', 'sports', 'technology', 'arts', 'business', 'food', 
@@ -32,83 +34,187 @@ const ExplorePage = () => {
     dispatch(setFilters({ category: filters.category === category ? '' : category }));
   };
 
+  const sortByOptions = [
+    { name: 'Upcoming', value: 'dateAsc' },
+    { name: 'Newly Added', value: 'newest' }
+  ];
+
+  const currentSortName = sortByOptions.find(opt => opt.value === filters.sortBy)?.name || 'Upcoming';
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Search Header */}
-      <div className="mb-8 p-6 bg-white dark:bg-secondary-800 rounded-2xl border border-secondary-200 dark:border-secondary-700 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full max-w-lg">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-secondary-400" />
-          <input 
-            type="text" 
-            placeholder="Search events by name or location..." 
-            className="input-field pl-10 h-12 text-base rounded-xl bg-secondary-50 dark:bg-secondary-900 border-none focus:ring-2 focus:ring-primary-500"
-            value={filters.keyword}
-            onChange={handleSearchChange}
-          />
-        </div>
-        <div className="flex gap-4 w-full md:w-auto">
-            <button className="btn btn-outline h-12 px-6 flex-1 md:flex-none gap-2 rounded-xl border-secondary-200 dark:border-secondary-700 dark:text-secondary-300">
-                <Filter className="h-4 w-4" /> Filters
-            </button>
-            <select 
-                className="input-field h-12 flex-1 md:flex-none rounded-xl border-secondary-200 dark:border-secondary-700 dark:bg-secondary-900 dark:text-secondary-300"
-                value={filters.sortBy}
-                onChange={(e) => dispatch(setFilters({ sortBy: e.target.value }))}
-            >
-                <option value="dateAsc">Upcoming</option>
-                <option value="newest">Newly Added</option>
-            </select>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-secondary-900 min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-baseline justify-between border-b border-secondary-200 dark:border-secondary-800 pb-6 pt-6">
+          <h1 className="text-4xl font-bold tracking-tight text-secondary-900 dark:text-white">Discover Events</h1>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Categories Sidebar */}
-        <aside className="lg:w-64 shrink-0 hidden lg:block">
-            <h3 className="text-sm font-bold text-secondary-900 dark:text-white uppercase tracking-widest mb-4">Categories</h3>
-            <ul className="space-y-1">
-                <li 
-                    className={`px-3 py-2 rounded-md text-sm cursor-pointer transition-colors ${!filters.category ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-semibold' : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
-                    onClick={() => dispatch(setFilters({ category: '' }))}
-                >
-                    All Categories
-                </li>
-                {EVENT_CATEGORIES.map(cat => (
-                    <li 
-                        key={cat}
-                        className={`px-3 py-2 rounded-md text-sm cursor-pointer capitalize transition-colors ${filters.category === cat ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-semibold' : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
-                        onClick={() => handleCategorySelect(cat)}
-                    >
-                        {cat}
-                    </li>
-                ))}
-            </ul>
-        </aside>
+          <div className="flex items-center">
+            <Menu as="div" className="relative inline-block text-left">
+              <div>
+                <MenuButton className="group inline-flex justify-center text-sm font-medium text-secondary-700 dark:text-secondary-300 hover:text-secondary-900 dark:hover:text-white">
+                  Sort by: {currentSortName}
+                  <ChevronDown
+                    className="-mr-1 ml-1 h-5 w-5 shrink-0 text-secondary-400 group-hover:text-secondary-500 dark:group-hover:text-secondary-300"
+                    aria-hidden="true"
+                  />
+                </MenuButton>
+              </div>
 
-        {/* Grid */}
-        <div className="flex-1">
-            {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {[1,2,3,4,5,6].map(i => (
-                        <div key={i} className="card h-[340px] animate-pulse bg-secondary-100 dark:bg-secondary-800 border-none"></div>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <MenuItems className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white dark:bg-secondary-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-white/10 focus:outline-none">
+                  <div className="py-1">
+                    {sortByOptions.map((option) => (
+                      <MenuItem key={option.name}>
+                        {({ focus }) => (
+                          <button
+                            onClick={() => dispatch(setFilters({ sortBy: option.value }))}
+                            className={`
+                              ${focus ? 'bg-secondary-100 dark:bg-secondary-700' : ''}
+                              ${option.value === filters.sortBy ? 'font-medium text-secondary-900 dark:text-white' : 'text-secondary-500 dark:text-secondary-400'}
+                              block w-full text-left px-4 py-2 text-sm
+                            `}
+                          >
+                            {option.name}
+                          </button>
+                        )}
+                      </MenuItem>
                     ))}
-                </div>
-            ) : events.length === 0 ? (
-                <div className="text-center py-20 bg-white dark:bg-secondary-800 rounded-2xl border border-secondary-200 dark:border-secondary-700">
-                    <h3 className="text-xl font-bold text-secondary-900 dark:text-white mb-2">No events found</h3>
-                    <p className="text-secondary-500 dark:text-secondary-400">Try adjusting your search criteria</p>
-                    <button onClick={() => dispatch(setFilters({ keyword: '', category: '' }))} className="btn btn-primary mt-6">Clear All Filters</button>
-                </div>
-            ) : (
-                <>
-                    <h2 className="text-xl font-bold text-secondary-900 dark:text-white mb-6 uppercase tracking-tight">Events Near You</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {events.map((event) => (
-                            <EventCard key={event._id} event={event} />
-                        ))}
-                    </div>
-                </>
-            )}
+                  </div>
+                </MenuItems>
+              </Transition>
+            </Menu>
+
+            <button
+              type="button"
+              className="-m-2 ml-4 p-2 text-secondary-400 hover:text-secondary-500 sm:ml-6 lg:hidden"
+            >
+              <span className="sr-only">Filters</span>
+              <Filter className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
+
+        <section aria-labelledby="products-heading" className="pb-24 pt-6">
+          <h2 id="products-heading" className="sr-only">
+            Events
+          </h2>
+
+          <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
+            {/* Filters */}
+            <div className="hidden lg:block">
+              <div className="space-y-6">
+                <div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-secondary-400 pl-3" aria-hidden="true" />
+                    <input
+                      type="text"
+                      name="search"
+                      id="search"
+                      className="block w-full rounded-md border-0 py-2 pl-10 text-secondary-900 dark:text-white dark:bg-secondary-800 shadow-sm ring-1 ring-inset ring-secondary-300 dark:ring-secondary-700 placeholder:text-secondary-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                      placeholder="Search events..."
+                      value={filters.keyword}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-secondary-900 dark:text-white mb-4">Category</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <input
+                        id="category-all"
+                        name="category"
+                        type="radio"
+                        checked={!filters.category}
+                        onChange={() => dispatch(setFilters({ category: '' }))}
+                        className="h-4 w-4 border-secondary-300 dark:border-secondary-600 dark:bg-secondary-800 text-primary-600 focus:ring-primary-600"
+                      />
+                      <label htmlFor="category-all" className="ml-3 text-sm text-secondary-600 dark:text-secondary-400">
+                        All Categories
+                      </label>
+                    </div>
+                    {EVENT_CATEGORIES.map((category) => (
+                      <div key={category} className="flex items-center">
+                        <input
+                          id={`category-${category}`}
+                          name="category"
+                          type="radio"
+                          checked={filters.category === category}
+                          onChange={() => handleCategorySelect(category)}
+                          className="h-4 w-4 border-secondary-300 dark:border-secondary-600 dark:bg-secondary-800 text-primary-600 focus:ring-primary-600"
+                        />
+                        <label htmlFor={`category-${category}`} className="ml-3 text-sm text-secondary-600 dark:text-secondary-400 capitalize">
+                          {category}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Product grid */}
+            <div className="lg:col-span-3">
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex flex-col gap-4">
+                      <Skeleton className="h-48 w-full" />
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-10 w-full mt-4" />
+                    </div>
+                  ))}
+                </div>
+              ) : events.length === 0 ? (
+                <div className="text-center rounded-2xl border-2 border-dashed border-secondary-300 dark:border-secondary-700 p-12">
+                  <svg
+                    className="mx-auto h-12 w-12 text-secondary-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      vectorEffect="non-scaling-stroke"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-semibold text-secondary-900 dark:text-white">No events found</h3>
+                  <p className="mt-1 text-sm text-secondary-500 dark:text-secondary-400">
+                    Try adjusting your search or filters to find what you're looking for.
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setFilters({ keyword: '', category: '' }))}
+                      className="inline-flex items-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {events.map((event) => (
+                    <EventCard key={event._id} event={event} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

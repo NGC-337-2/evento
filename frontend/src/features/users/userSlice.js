@@ -8,6 +8,7 @@ const initialState = {
   isSuccess: false,
   isLoading: false,
   message: '',
+  savedEvents: [],
 };
 
 // Get all users (Admin only)
@@ -36,6 +37,39 @@ export const deleteUser = createAsyncThunk('users/delete', async (id, thunkAPI) 
 export const updateProfile = createAsyncThunk('users/updateProfile', async (userData, thunkAPI) => {
   try {
     const response = await axiosClient.put(`/users/${userData.id}`, userData);
+    return response.data;
+  } catch (error) {
+    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// Toggle Save Event
+export const toggleSaveEvent = createAsyncThunk('users/toggleSaveEvent', async (eventId, thunkAPI) => {
+  try {
+    const response = await axiosClient.patch(`/users/save-event/${eventId}`);
+    return response.data;
+  } catch (error) {
+    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// Get Saved Events
+export const getSavedEvents = createAsyncThunk('users/getSavedEvents', async (_, thunkAPI) => {
+  try {
+    const response = await axiosClient.get('/users/saved-events');
+    return response.data;
+  } catch (error) {
+    const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
+// Update Password
+export const updatePassword = createAsyncThunk('users/updatePassword', async (passwordData, thunkAPI) => {
+  try {
+    const response = await axiosClient.put(`/users/${passwordData.id}/password`, passwordData);
     return response.data;
   } catch (error) {
     const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
@@ -74,6 +108,24 @@ export const userSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.userProfile = action.payload.data;
+      })
+      .addCase(getSavedEvents.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getSavedEvents.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.savedEvents = action.payload.data;
+      })
+      .addCase(getSavedEvents.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(toggleSaveEvent.fulfilled, (state, action) => {
+          // If we are in the saved events view, we might want to update the list
+          // But usually we just update the auth user's savedEvents array if it's there
+          // or just refetch. For now, let's just update the savedEvents if it matches
+          state.isSuccess = true;
       });
   },
 });

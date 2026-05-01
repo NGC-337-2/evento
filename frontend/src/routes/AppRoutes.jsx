@@ -28,7 +28,7 @@ const AppRoutes = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route element={<ProtectedRoute allowedRoles={['organiser', 'admin']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['organizer', 'admin']} />}>
               <Route path="manage/events/create" element={<CreateEventPage />} />
               <Route path="manage/events/edit/:id" element={<EditEventPage />} />
           </Route>

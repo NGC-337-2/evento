@@ -45,7 +45,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'suspended', 'deleted'],
     default: 'active'
-  }
+  },
+  savedEvents: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Event'
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

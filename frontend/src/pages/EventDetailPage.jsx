@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getEventById } from '../features/events/eventsSlice';
+import { toggleSaveEvent } from '../features/users/userSlice';
 import axiosClient from '../api/axiosClient';
-import { MapPin, Calendar, Users, Ticket as TicketIcon, Clock, Share2, Heart } from 'lucide-react';
+import { MapPin, Calendar, Users, Ticket as TicketIcon, Clock, Share2, Heart, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import Spinner from '../components/Spinner';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -21,16 +23,39 @@ const EventDetailPage = () => {
     dispatch(getEventById(id));
   }, [id, dispatch]);
 
+  const isSaved = user?.savedEvents?.includes(id);
+
+  const handleToggleSave = () => {
+    if (!user) {
+      toast.info("Please login to save events");
+      return;
+    }
+    dispatch(toggleSaveEvent(id));
+    toast.success(isSaved ? "Removed from saved events" : "Event saved!");
+  };
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast.success("Event link copied to clipboard!");
+  };
+
   if (isLoading || !event) {
-    return <div className="container mx-auto px-4 py-12 flex justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+    return <Spinner fullScreen />;
   }
 
   if (isError) {
-    return <div className="container mx-auto px-4 py-12 text-center text-red-500">Error loading event details</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-secondary-900 dark:text-white">Error loading event details</h2>
+          <button onClick={() => navigate('/explore')} className="mt-4 text-primary-600 hover:underline">Return to Explore</button>
+        </div>
+      </div>
+    );
   }
 
-  const startDate = new Date(event.date.start);
-  const endDate = new Date(event.date.end);
+  const startDate = new Date(event.date);
 
   const handleQuantityChange = (tierId, amount) => {
       setQuantities(prev => ({
@@ -70,108 +95,219 @@ const EventDetailPage = () => {
       }
   };
 
+  const calculateSubtotal = () => {
+    let total = 0;
+    event.ticketTiers?.forEach(tier => {
+      total += (quantities[tier._id] || 0) * tier.price;
+    });
+    return total;
+  };
+
+  const subtotal = calculateSubtotal();
+
   return (
-    <div className="bg-secondary-50 dark:bg-secondary-900 pb-20">
-        {/* Hero Section */}
-        <div className="w-full h-[50vh] min-h-[400px] relative bg-secondary-900">
-            <img 
-              src={event.image === 'no-photo.jpg' ? 'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg' : event.image} 
-              alt={event.title}
-              className="w-full h-full object-cover opacity-60"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-secondary-900 via-transparent to-transparent"></div>
+    <div className="bg-white dark:bg-secondary-900 min-h-screen pb-24">
+      {/* Hero section */}
+      <div className="relative h-[60vh] min-h-[500px] w-full">
+        <img
+          src={event.image === 'no-photo.jpg' ? 'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg' : event.image}
+          alt={event.title}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-secondary-900/40 mix-blend-multiply" aria-hidden="true" />
+        <div className="absolute inset-0 bg-gradient-to-t from-secondary-900 via-secondary-900/40" />
+        
+        {/* Navigation / Actions on Hero */}
+        <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10 max-w-7xl mx-auto">
+          <nav aria-label="Breadcrumb" className="hidden sm:block">
+            <ol role="list" className="flex items-center space-x-2 text-sm font-medium text-white/80">
+              <li>
+                <button onClick={() => navigate('/')} className="hover:text-white transition-colors">Home</button>
+              </li>
+              <li>
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="h-5 w-5 flex-shrink-0 text-white/50">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </li>
+              <li>
+                <button onClick={() => navigate('/explore')} className="hover:text-white transition-colors">Events</button>
+              </li>
+            </ol>
+          </nav>
+          
+          <div className="flex items-center gap-3 ml-auto">
+            <button 
+              type="button" 
+              onClick={handleShare}
+              className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-colors backdrop-blur-sm"
+            >
+              <span className="sr-only">Share</span>
+              <Share2 className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button 
+              type="button" 
+              onClick={handleToggleSave}
+              className={`rounded-full p-2 transition-colors backdrop-blur-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                isSaved ? 'bg-primary-600 text-white shadow-md' : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              <span className="sr-only">Save event</span>
+              <Heart className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} aria-hidden="true" />
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div className="container mx-auto px-4 -mt-32 relative z-10 hidden sm:block">
-             <div className="inline-flex gap-2">
-                 <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-3 rounded-full transition-colors"><Share2 className="w-5 h-5" /></button>
-                 <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-3 rounded-full transition-colors"><Heart className="w-5 h-5" /></button>
-             </div>
-        </div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-48 relative z-10">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-x-8 xl:gap-x-12">
+          {/* Main content */}
+          <div className="lg:col-span-7 xl:col-span-8">
+            <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-xl ring-1 ring-secondary-900/5 dark:ring-white/10 p-8">
+              <div className="mb-4 flex items-center">
+                <span className="inline-flex items-center rounded-full bg-primary-50 dark:bg-primary-900/30 px-3 py-1 text-sm font-semibold text-primary-600 dark:text-primary-400 capitalize ring-1 ring-inset ring-primary-600/20 dark:ring-primary-500/30">
+                  {event.category || 'General'}
+                </span>
+              </div>
+              
+              <h1 className="text-3xl font-bold tracking-tight text-secondary-900 dark:text-white sm:text-5xl mb-8">
+                {event.title}
+              </h1>
 
-        <div className="container mx-auto px-4 mt-6">
-            <div className="flex flex-col lg:flex-row gap-8">
-                {/* Main Content */}
-                <div className="flex-1 space-y-8">
-                    <div className="bg-white dark:bg-secondary-800 rounded-2xl p-6 md:p-8 shadow-sm border border-secondary-200 dark:border-secondary-700">
-                         <div className="flex items-center gap-3 mb-4">
-                            <span className="px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-sm font-semibold rounded-full uppercase tracking-wider">{event.category}</span>
-                         </div>
-                         <h1 className="text-3xl md:text-5xl font-extrabold text-secondary-900 dark:text-white mb-6 leading-tight uppercase tracking-tight">{event.title}</h1>
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-secondary-600 dark:text-secondary-400 font-medium">
-                            <div className="flex gap-4 items-start">
-                                <div className="bg-secondary-100 dark:bg-secondary-900 p-3 rounded-xl"><Calendar className="w-6 h-6 text-primary-500" /></div>
-                                <div>
-                                    <p className="text-secondary-900 dark:text-white font-bold text-base mb-1">{format(startDate, 'EEEE, MMMM d, yyyy')}</p>
-                                    <p>{format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-4 items-start">
-                                <div className="bg-secondary-100 dark:bg-secondary-900 p-3 rounded-xl"><MapPin className="w-6 h-6 text-primary-500" /></div>
-                                <div>
-                                    <p className="text-secondary-900 dark:text-white font-bold text-base mb-1">{event.location?.address}</p>
-                                    <p>{event.location?.city}</p>
-                                </div>
-                            </div>
-                         </div>
-                    </div>
-
-                    <div className="bg-white dark:bg-secondary-800 rounded-2xl p-6 md:p-8 shadow-sm border border-secondary-200 dark:border-secondary-700">
-                        <h2 className="text-2xl font-bold text-secondary-900 dark:text-white mb-4">About this event</h2>
-                        <div className="prose dark:prose-invert max-w-none text-secondary-600 dark:text-secondary-400">
-                            {event.description}
-                        </div>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8 border-b border-secondary-200 dark:border-secondary-700">
+                <div className="flex gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400">
+                    <Calendar className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-secondary-900 dark:text-white">Date and Time</h3>
+                    <p className="mt-1 text-secondary-600 dark:text-secondary-400">{format(startDate, 'EEEE, MMMM d, yyyy')}</p>
+                    <p className="text-secondary-600 dark:text-secondary-400">{format(startDate, 'h:mm a')}</p>
+                  </div>
                 </div>
 
-                {/* Sidebar Checkout */}
-                <div className="lg:w-[400px] shrink-0">
-                    <div className="sticky top-24 bg-white dark:bg-secondary-800 rounded-2xl shadow-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden">
-                        <div className="p-6 bg-secondary-900 text-white">
-                            <h3 className="text-xl font-bold mb-1">Select Tickets</h3>
-                            <p className="text-secondary-400 text-sm">Secure your spot instantly.</p>
-                        </div>
-                        
-                        <div className="p-6 space-y-4">
-                            {event.ticketTiers?.map(tier => (
-                                <div key={tier._id} className="flex items-center justify-between p-4 border border-secondary-200 dark:border-secondary-700 rounded-xl">
-                                    <div>
-                                        <h4 className="font-bold text-secondary-900 dark:text-white text-lg">{tier.name}</h4>
-                                        <p className="text-primary-600 dark:text-primary-400 font-semibold">{tier.price > 0 ? `$${tier.price}` : 'Free'}</p>
-                                        <p className="text-xs text-secondary-500 mt-1">{tier.capacity - tier.sold} remaining</p>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-3">
-                                        <button 
-                                            onClick={() => handleQuantityChange(tier._id, -1)}
-                                            className="w-8 h-8 rounded-full border border-secondary-300 dark:border-secondary-600 flex items-center justify-center text-secondary-600 hover:bg-secondary-100 dark:text-secondary-300 dark:hover:bg-secondary-700 disabled:opacity-50"
-                                            disabled={!quantities[tier._id]}
-                                        >-</button>
-                                        <span className="w-4 text-center font-bold text-secondary-900 dark:text-white">{quantities[tier._id] || 0}</span>
-                                        <button 
-                                            onClick={() => handleQuantityChange(tier._id, 1)}
-                                            className="w-8 h-8 rounded-full border border-secondary-300 dark:border-secondary-600 flex items-center justify-center text-secondary-600 hover:bg-secondary-100 dark:text-secondary-300 dark:hover:bg-secondary-700 disabled:opacity-50"
-                                            disabled={(quantities[tier._id] || 0) >= (tier.capacity - tier.sold)}
-                                        >+</button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        <div className="p-6 border-t border-secondary-200 dark:border-secondary-700 bg-secondary-50 dark:bg-secondary-900/50">
-                            <button 
-                                onClick={handleCheckout} 
-                                disabled={isBooking || Object.values(quantities).reduce((a,b)=>a+b,0) === 0}
-                                className="btn btn-primary w-full h-14 text-base tracking-wider uppercase"
-                            >
-                                {isBooking ? 'Processing...' : 'Checkout'}
-                            </button>
-                        </div>
-                    </div>
+                <div className="flex gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400">
+                    <MapPin className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-secondary-900 dark:text-white">Location</h3>
+                    <p className="mt-1 text-secondary-600 dark:text-secondary-400">{event.location?.address}</p>
+                    <p className="text-secondary-600 dark:text-secondary-400">{event.location?.city}</p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="pt-8">
+                <h2 className="text-2xl font-bold tracking-tight text-secondary-900 dark:text-white mb-4">About this event</h2>
+                <div className="prose prose-base dark:prose-invert max-w-none text-secondary-600 dark:text-secondary-400">
+                  <p>{event.description}</p>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* Sidebar / Checkout */}
+          <div className="mt-10 lg:col-span-5 xl:col-span-4 lg:mt-0">
+            <div className="sticky top-24 rounded-2xl bg-white dark:bg-secondary-800 shadow-xl ring-1 ring-secondary-900/5 dark:ring-white/10 overflow-hidden">
+              <div className="bg-secondary-50 dark:bg-secondary-900/50 px-6 py-6 border-b border-secondary-200 dark:border-secondary-700">
+                <h2 className="text-lg font-bold text-secondary-900 dark:text-white">Select Tickets</h2>
+                <p className="text-sm text-secondary-500 dark:text-secondary-400">Secure your spot instantly.</p>
+              </div>
+
+              <div className="px-6 py-6">
+                <ul role="list" className="-my-6 divide-y divide-secondary-200 dark:divide-secondary-700">
+                  {event.ticketTiers?.map((tier) => {
+                    const remaining = tier.capacity - tier.sold;
+                    const isSoldOut = remaining <= 0;
+                    
+                    return (
+                      <li key={tier._id} className="flex py-6">
+                        <div className="flex flex-1 flex-col justify-center">
+                          <div className="flex justify-between text-base font-medium text-secondary-900 dark:text-white">
+                            <h3 className={isSoldOut ? "line-through text-secondary-500" : ""}>{tier.name}</h3>
+                            <p className="ml-4">{tier.price > 0 ? `$${tier.price.toFixed(2)}` : 'Free'}</p>
+                          </div>
+                          <p className="mt-1 text-sm text-secondary-500 dark:text-secondary-400">
+                            {isSoldOut ? 'Sold out' : `${remaining} tickets remaining`}
+                          </p>
+                        </div>
+                        <div className="ml-4 flex flex-1 flex-col justify-center items-end">
+                          <div className="flex items-center rounded-md border border-secondary-300 dark:border-secondary-600 p-1 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => handleQuantityChange(tier._id, -1)}
+                              disabled={!quantities[tier._id] || isSoldOut}
+                              className="p-1.5 text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-white disabled:opacity-50 transition-colors"
+                            >
+                              <span className="sr-only">Decrease</span>
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" /></svg>
+                            </button>
+                            <span className="w-8 text-center text-sm font-semibold text-secondary-900 dark:text-white">
+                              {quantities[tier._id] || 0}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleQuantityChange(tier._id, 1)}
+                              disabled={(quantities[tier._id] || 0) >= remaining || isSoldOut}
+                              className="p-1.5 text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-white disabled:opacity-50 transition-colors"
+                            >
+                              <span className="sr-only">Increase</span>
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {subtotal > 0 && (
+                <div className="border-t border-secondary-200 dark:border-secondary-700 px-6 py-4 bg-secondary-50 dark:bg-secondary-900/20">
+                  <div className="flex justify-between text-base font-medium text-secondary-900 dark:text-white">
+                    <p>Subtotal</p>
+                    <p>${subtotal.toFixed(2)}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-secondary-200 dark:border-secondary-700 px-6 py-6">
+                <button
+                  type="button"
+                  onClick={handleCheckout}
+                  disabled={isBooking || Object.values(quantities).reduce((a, b) => a + b, 0) === 0}
+                  className="flex w-full items-center justify-center rounded-md border border-transparent bg-primary-600 px-6 py-4 text-base font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isBooking ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="mr-2 h-5 w-5" aria-hidden="true" />
+                      Secure Checkout
+                    </>
+                  )}
+                </button>
+                <div className="mt-4 flex justify-center text-center text-sm text-secondary-500">
+                  <p>
+                    or{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
+                      onClick={() => navigate('/explore')}
+                    >
+                      Continue browsing
+                      <span aria-hidden="true"> &rarr;</span>
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
   );
 };

@@ -49,10 +49,7 @@ const bookingSchema = new mongoose.Schema({
     type: String, // Stripe Payment Intent ID
     default: null
   },
-  ticketCodes: [{
-    type: String,
-    unique: true
-  }],
+  ticketCodes: [String],
   notes: {
     type: String,
     trim: true,
@@ -66,6 +63,14 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  checkedIn: {
+    type: Boolean,
+    default: false
+  },
+  checkedInAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -78,6 +83,7 @@ bookingSchema.index({ user: 1, event: 1 });
 bookingSchema.index({ paymentStatus: 1 });
 bookingSchema.index({ status: 1 });
 bookingSchema.index({ createdAt: -1 });
+bookingSchema.index({ ticketCodes: 1 }, { unique: true, sparse: true });
 
 // 🎟️ Virtual: Format booking date
 bookingSchema.virtual('createdAtFormatted').get(function () {

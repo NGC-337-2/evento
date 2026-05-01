@@ -9,17 +9,17 @@ const DashboardPage = () => {
   if (!user) return null;
 
   return (
-    <div className="container mx-auto px-4 py-8 flex-grow">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-secondary-900 dark:text-white uppercase tracking-tight">Dashboard</h1>
-        <p className="text-secondary-600 dark:text-secondary-400 mt-1">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 flex-grow">
+      <div className="mb-10">
+        <h1 className="text-3xl font-bold tracking-tight text-secondary-900 dark:text-white">Dashboard</h1>
+        <p className="mt-2 text-sm text-secondary-500 dark:text-secondary-400">
           Welcome back, <span className="font-semibold text-primary-600 dark:text-primary-400">{user.name}</span> ({user.role})
         </p>
       </div>
       
       {user.role === 'admin' ? (
           <AdminDashboard />
-      ) : user.role === 'organiser' ? (
+      ) : user.role === 'organizer' ? (
           <OrganiserDashboard />
       ) : (
           <AttendeeDashboard />

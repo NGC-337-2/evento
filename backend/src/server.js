@@ -31,6 +31,8 @@ const eventRoutes = require('./routes/eventRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const userRoutes = require('./routes/userRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const exportRoutes = require('./routes/exportRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // ─── Environment Validation ──────────────────────────────────────────────────
 const requiredEnvVars = ['NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'CLIENT_URL'];
@@ -231,6 +233,8 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/stats', statsRoutes);
+app.use('/api/v1/export', exportRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // ─── 404 & Error Handling ─────────────────────────────────────────────────────
 app.use(notFound);
