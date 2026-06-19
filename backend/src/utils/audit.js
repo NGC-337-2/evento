@@ -18,9 +18,11 @@ const logAudit = async (req, action, targetType, targetId, details = {}) => {
       targetId,
       details,
       ipAddress: req.ip,
-      userAgent: req.get('user-agent')
+      userAgent: req.get('user-agent'),
     });
-    logger.info(`📋 Audit Log: ${action} by ${req.user.email} on ${targetType} ${targetId}`);
+    logger.info(
+      `📋 Audit Log: ${action} by ${req.user.email} on ${targetType} ${targetId}`
+    );
   } catch (error) {
     logger.error('❌ Failed to create audit log', error);
   }

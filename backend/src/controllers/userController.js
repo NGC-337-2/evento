@@ -16,7 +16,10 @@ exports.getUserById = async (req, res) => {
   }
 
   // Authorization: Only the user themselves or an admin can view
-  if (req.user._id.toString() !== user._id.toString() && req.user.role !== ROLES.ADMIN) {
+  if (
+    req.user._id.toString() !== user._id.toString() &&
+    req.user.role !== ROLES.ADMIN
+  ) {
     const err = new Error('Not authorized to view this profile');
     err.statusCode = 403;
     throw err;
@@ -29,7 +32,10 @@ exports.getUserById = async (req, res) => {
 // @route   PUT /api/v1/users/:id
 // @access  Private (Self)
 exports.updateUser = async (req, res) => {
-  if (req.user._id.toString() !== req.params.id && req.user.role !== ROLES.ADMIN) {
+  if (
+    req.user._id.toString() !== req.params.id &&
+    req.user.role !== ROLES.ADMIN
+  ) {
     const err = new Error('Not authorized to update this profile');
     err.statusCode = 403;
     throw err;
@@ -38,7 +44,7 @@ exports.updateUser = async (req, res) => {
   // Whitelist allowed fields to prevent role/status tampering
   const allowedUpdates = ['name', 'profileImage', 'location', 'bio'];
   const updates = {};
-  allowedUpdates.forEach(field => {
+  allowedUpdates.forEach((field) => {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   });
 
@@ -54,7 +60,11 @@ exports.updateUser = async (req, res) => {
     throw err;
   }
 
-  res.status(200).json({ success: true, message: 'Profile updated successfully', data: user });
+  res.status(200).json({
+    success: true,
+    message: 'Profile updated successfully',
+    data: user,
+  });
 };
 
 // @desc    Update user password
@@ -89,7 +99,9 @@ exports.updatePassword = async (req, res) => {
   await user.save();
 
   logger.info(`✅ Password updated for user ${user._id}`);
-  res.status(200).json({ success: true, message: 'Password updated successfully' });
+  res
+    .status(200)
+    .json({ success: true, message: 'Password updated successfully' });
 };
 
 // @desc    Delete user account (Soft delete for self, hard delete for admin)
@@ -104,7 +116,10 @@ exports.deleteUser = async (req, res) => {
     throw err;
   }
 
-  if (req.user._id.toString() !== user._id.toString() && req.user.role !== ROLES.ADMIN) {
+  if (
+    req.user._id.toString() !== user._id.toString() &&
+    req.user.role !== ROLES.ADMIN
+  ) {
     const err = new Error('Not authorized to delete this account');
     err.statusCode = 403;
     throw err;
@@ -117,10 +132,15 @@ exports.deleteUser = async (req, res) => {
   } else {
     // Admins: Hard delete
     await user.deleteOne();
-    await logAudit(req, 'DELETE_USER', 'User', user._id, { name: user.name, email: user.email });
+    await logAudit(req, 'DELETE_USER', 'User', user._id, {
+      name: user.name,
+      email: user.email,
+    });
   }
 
-  res.status(200).json({ success: true, message: 'Account deleted successfully' });
+  res
+    .status(200)
+    .json({ success: true, message: 'Account deleted successfully' });
 };
 
 // @desc    Get all users with pagination (Admin only)
@@ -170,7 +190,9 @@ exports.toggleSaveEvent = async (req, res) => {
 
   if (isSaved) {
     // Remove if already saved
-    user.savedEvents = user.savedEvents.filter(id => id.toString() !== eventId);
+    user.savedEvents = user.savedEvents.filter(
+      (id) => id.toString() !== eventId
+    );
   } else {
     // Add if not saved
     user.savedEvents.push(eventId);
@@ -180,8 +202,10 @@ exports.toggleSaveEvent = async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: isSaved ? 'Event removed from saved items' : 'Event saved successfully',
-    data: user.savedEvents
+    message: isSaved
+      ? 'Event removed from saved items'
+      : 'Event saved successfully',
+    data: user.savedEvents,
   });
 };
 
@@ -200,6 +224,6 @@ exports.getSavedEvents = async (req, res) => {
   res.status(200).json({
     success: true,
     count: user.savedEvents.length,
-    data: user.savedEvents
+    data: user.savedEvents,
   });
 };

@@ -7,7 +7,7 @@ const {
   JWT_SECRET,
   JWT_EXPIRES_IN = '7d',
   JWT_REFRESH_SECRET = process.env.JWT_SECRET, // Fallback if not explicitly set
-  JWT_REFRESH_EXPIRES_IN = '30d'
+  JWT_REFRESH_EXPIRES_IN = '30d',
 } = process.env;
 
 if (!JWT_SECRET) {

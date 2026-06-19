@@ -10,7 +10,10 @@ const protect = async (req, res, next) => {
   let token;
 
   // 1. Extract token from Bearer header
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     token = req.headers.authorization.split(' ')[1];
   }
   // 2. Fallback to httpOnly cookie
@@ -73,7 +76,9 @@ const authorize = (...allowedRoles) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      const err = new Error(`Role '${req.user.role}' is not authorized to access this resource`);
+      const err = new Error(
+        `Role '${req.user.role}' is not authorized to access this resource`
+      );
       err.statusCode = 403;
       err.name = 'ForbiddenError';
       throw err;

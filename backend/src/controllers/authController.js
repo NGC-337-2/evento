@@ -7,7 +7,8 @@ const logger = require('../config/logger');
 const { JWT_SECRET, JWT_EXPIRES_IN = '7d', CLIENT_URL } = process.env;
 
 // 🔑 Helper: Generate JWT
-const signToken = (id) => jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+const signToken = (id) =>
+  jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
 // @desc    Register new user
 // @route   POST /api/v1/auth/register
@@ -24,22 +25,26 @@ exports.register = async (req, res) => {
 
   // Generate verification token
   const verificationToken = crypto.randomBytes(32).toString('hex');
-  const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+  const hashedVerificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
 
-  const user = await User.create({ 
-    name, 
-    email, 
+  const user = await User.create({
+    name,
+    email,
     password,
     role,
     isVerified: process.env.NODE_ENV === 'development', // Auto-verify in dev
     verificationToken: hashedVerificationToken,
-    verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+    verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
   });
 
   // Send verification email (don't await to avoid slowing down registration)
   if (process.env.NODE_ENV !== 'development') {
-    emailService.sendVerificationEmail(user.email, verificationToken)
-      .catch(err => logger.error('Failed to send verification email', err));
+    emailService
+      .sendVerificationEmail(user.email, verificationToken)
+      .catch((err) => logger.error('Failed to send verification email', err));
   }
 
   const token = signToken(user._id);
@@ -47,7 +52,7 @@ exports.register = async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Registration successful. Please verify your email.',
-    data: { user, token }
+    data: { user, token },
   });
 };
 
@@ -75,7 +80,7 @@ exports.login = async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Login successful',
-    data: { user, token }
+    data: { user, token },
   });
 };
 
@@ -97,7 +102,7 @@ exports.verifyEmail = async (req, res) => {
   const user = await User.findOne({
     email,
     verificationToken: hashedToken,
-    verificationTokenExpires: { $gt: Date.now() }
+    verificationTokenExpires: { $gt: Date.now() },
   });
 
   if (!user) {
@@ -114,7 +119,7 @@ exports.verifyEmail = async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Email verified successfully',
-    data: { token: signToken(user._id) }
+    data: { token: signToken(user._id) },
   });
 };
 
@@ -129,37 +134,46 @@ exports.forgotPassword = async (req, res) => {
   if (!user) {
     return res.status(200).json({
       success: true,
-      message: 'If an account with that email exists, a reset link has been sent.'
+      message:
+        'If an account with that email exists, a reset link has been sent.',
     });
   }
 
   const resetToken = crypto.randomBytes(32).toString('hex');
-  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
   user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
   await user.save();
 
   const resetUrl = `${CLIENT_URL}/reset-password/${resetToken}`;
 
-  emailService.sendPasswordResetEmail(user.email, resetUrl)
-    .catch(err => logger.error('Failed to send password reset email', err));
+  emailService
+    .sendPasswordResetEmail(user.email, resetUrl)
+    .catch((err) => logger.error('Failed to send password reset email', err));
 
   res.status(200).json({
     success: true,
     message: 'Password reset instructions sent.',
-    data: { resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined }
+    data: {
+      resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined,
+    },
   });
 };
-
 
 // @desc    Reset password using token
 // @route   PUT /api/v1/auth/reset-password/:token
 // @access  Public
 exports.resetPassword = async (req, res) => {
-  const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
 
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
-    resetPasswordExpires: { $gt: Date.now() }
+    resetPasswordExpires: { $gt: Date.now() },
   });
 
   if (!user) {
@@ -176,6 +190,6 @@ exports.resetPassword = async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Password reset successful. You can now log in.',
-    data: { token: signToken(user._id) }
+    data: { token: signToken(user._id) },
   });
 };

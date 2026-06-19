@@ -30,13 +30,19 @@ router.get('/:id', eventController.getEventById);
 // Helper to parse JSON strings from FormData (required for file uploads)
 const parseEventData = (req, res, next) => {
   if (typeof req.body.location === 'string') {
-    try { req.body.location = JSON.parse(req.body.location); } catch (e) {}
+    try {
+      req.body.location = JSON.parse(req.body.location);
+    } catch (e) {}
   }
   if (typeof req.body.ticketTiers === 'string') {
-    try { req.body.ticketTiers = JSON.parse(req.body.ticketTiers); } catch (e) {}
+    try {
+      req.body.ticketTiers = JSON.parse(req.body.ticketTiers);
+    } catch (e) {}
   }
   if (typeof req.body.tags === 'string') {
-    try { req.body.tags = JSON.parse(req.body.tags); } catch (e) {}
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {}
   }
   if (req.body.capacity) {
     req.body.capacity = parseInt(req.body.capacity, 10);
@@ -75,6 +81,11 @@ router.delete('/:id', protect, eventController.deleteEvent);
 
 // @route   PATCH /api/v1/events/:id/cancel
 // @desc    Cancel event (ownership verified in controller)
-router.patch('/:id/cancel', protect, authorize('organizer', 'admin'), eventController.cancelEvent);
+router.patch(
+  '/:id/cancel',
+  protect,
+  authorize('organizer', 'admin'),
+  eventController.cancelEvent
+);
 
 module.exports = router;

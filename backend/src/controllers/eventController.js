@@ -26,11 +26,14 @@ exports.getEvents = async (req, res) => {
     page = PAGINATION.DEFAULT_PAGE,
     location,
     minPrice,
-    maxPrice
+    maxPrice,
   } = req.query;
 
   const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.min(PAGINATION.MAX_LIMIT, Math.max(1, parseInt(limit, 10)));
+  const limitNum = Math.min(
+    PAGINATION.MAX_LIMIT,
+    Math.max(1, parseInt(limit, 10))
+  );
   const skip = (pageNum - 1) * limitNum;
 
   // Build query
@@ -78,7 +81,7 @@ exports.getEvents = async (req, res) => {
       .skip(skip)
       .limit(limitNum)
       .lean(),
-    Event.countDocuments(query)
+    Event.countDocuments(query),
   ]);
 
   return apiResponse(res, 200, events, {
@@ -87,7 +90,7 @@ exports.getEvents = async (req, res) => {
       page: pageNum,
       pages: Math.ceil(total / limitNum),
       limit: limitNum,
-    }
+    },
   });
 };
 
@@ -115,12 +118,12 @@ exports.getFeaturedEvents = async (req, res) => {
   const events = await Event.find({
     status: EVENT_STATUS.PUBLISHED,
     isFeatured: true,
-    date: { $gte: new Date() }
+    date: { $gte: new Date() },
   })
-  .populate('organizer', 'name email')
-  .limit(5)
-  .sort({ date: 1 })
-  .lean();
+    .populate('organizer', 'name email')
+    .limit(5)
+    .sort({ date: 1 })
+    .lean();
 
   res.status(200).json({ success: true, count: events.length, data: events });
 };
@@ -142,12 +145,15 @@ exports.getMyEvents = async (req, res) => {
 exports.createEvent = async (req, res) => {
   try {
     let imageUrl = null;
-    
+
     // 1. Handle Image Upload
     if (req.file) {
       try {
         logger.info('☁️ Attempting Cloudinary upload...');
-        const result = await uploadToCloudinary(req.file.buffer, 'evento/events');
+        const result = await uploadToCloudinary(
+          req.file.buffer,
+          'evento/events'
+        );
         imageUrl = result.secure_url;
         logger.info('✅ Cloudinary upload successful');
       } catch (cloudErr) {
@@ -160,7 +166,7 @@ exports.createEvent = async (req, res) => {
 
     // 2. Prepare Event Data
     logger.info('💾 Preparing to save event...', { title: req.body.title });
-    
+
     // Ensure numeric fields are actually numbers
     const eventData = {
       ...req.body,
@@ -171,18 +177,19 @@ exports.createEvent = async (req, res) => {
 
     // 3. Save to Database
     const event = await Event.create(eventData);
-    
+
     logger.info('✅ Event created successfully', { eventId: event._id });
     res.status(201).json({ success: true, data: event });
-
   } catch (error) {
     logger.error('💥 Critical failure in createEvent:', error);
-    
+
     // If it's a Mongoose validation error, return 400
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
-        message: Object.values(error.errors).map(e => e.message).join(', ')
+        message: Object.values(error.errors)
+          .map((e) => e.message)
+          .join(', '),
       });
     }
 
@@ -191,7 +198,7 @@ exports.createEvent = async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: error.message || 'Internal Server Error',
-      requestId: req.id
+      requestId: req.id,
     });
   }
 };
@@ -208,7 +215,10 @@ exports.updateEvent = async (req, res) => {
   }
 
   // Ownership & Role Check
-  if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMIN) {
+  if (
+    event.organizer.toString() !== req.user._id.toString() &&
+    req.user.role !== ROLES.ADMIN
+  ) {
     const err = new Error('Not authorized to update this event');
     err.statusCode = 403;
     throw err;
@@ -227,9 +237,19 @@ exports.updateEvent = async (req, res) => {
   ).lean();
 
   // Log audit if status changed by admin
-  if (req.user.role === ROLES.ADMIN && req.body.status && req.body.status !== event.status) {
-      const action = req.body.status === EVENT_STATUS.PUBLISHED ? 'APPROVE_EVENT' : 'REJECT_EVENT';
-      await logAudit(req, action, 'Event', event._id, { oldStatus: event.status, newStatus: req.body.status });
+  if (
+    req.user.role === ROLES.ADMIN &&
+    req.body.status &&
+    req.body.status !== event.status
+  ) {
+    const action =
+      req.body.status === EVENT_STATUS.PUBLISHED
+        ? 'APPROVE_EVENT'
+        : 'REJECT_EVENT';
+    await logAudit(req, action, 'Event', event._id, {
+      oldStatus: event.status,
+      newStatus: req.body.status,
+    });
   }
 
   res.status(200).json({ success: true, data: updatedEvent });
@@ -247,7 +267,10 @@ exports.deleteEvent = async (req, res) => {
   }
 
   // Ownership & Role Check
-  if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMIN) {
+  if (
+    event.organizer.toString() !== req.user._id.toString() &&
+    req.user.role !== ROLES.ADMIN
+  ) {
     const err = new Error('Not authorized to delete this event');
     err.statusCode = 403;
     throw err;
@@ -255,7 +278,9 @@ exports.deleteEvent = async (req, res) => {
 
   // Constraint: Cannot delete if tickets have been sold
   if (event.bookingsCount > 0) {
-    const err = new Error('Cannot delete event with existing bookings. Please cancel it instead.');
+    const err = new Error(
+      'Cannot delete event with existing bookings. Please cancel it instead.'
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -265,49 +290,60 @@ exports.deleteEvent = async (req, res) => {
 
   // Log audit if deleted by admin
   if (req.user.role === ROLES.ADMIN) {
-      await logAudit(req, 'DELETE_EVENT', 'Event', event._id, { title: event.title });
+    await logAudit(req, 'DELETE_EVENT', 'Event', event._id, {
+      title: event.title,
+    });
   }
-  
-  res.status(200).json({ success: true, message: 'Event deleted successfully' });
+
+  res
+    .status(200)
+    .json({ success: true, message: 'Event deleted successfully' });
 };
 
 // @desc    Cancel event
 // @route   PATCH /api/v1/events/:id/cancel
 // @access  Private (Owner/Organizer)
 exports.cancelEvent = async (req, res) => {
-    const event = await Event.findById(req.params.id);
-    if (!event) {
-        const err = new Error('Event not found');
-        err.statusCode = 404;
-        throw err;
-    }
+  const event = await Event.findById(req.params.id);
+  if (!event) {
+    const err = new Error('Event not found');
+    err.statusCode = 404;
+    throw err;
+  }
 
-    // Ownership & Role Check
-    if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMIN) {
-        const err = new Error('Not authorized to cancel this event');
-        err.statusCode = 403;
-        throw err;
-    }
+  // Ownership & Role Check
+  if (
+    event.organizer.toString() !== req.user._id.toString() &&
+    req.user.role !== ROLES.ADMIN
+  ) {
+    const err = new Error('Not authorized to cancel this event');
+    err.statusCode = 403;
+    throw err;
+  }
 
-    if (event.status === EVENT_STATUS.CANCELLED) {
-        const err = new Error('Event is already cancelled');
-        err.statusCode = 400;
-        throw err;
-    }
+  if (event.status === EVENT_STATUS.CANCELLED) {
+    const err = new Error('Event is already cancelled');
+    err.statusCode = 400;
+    throw err;
+  }
 
-    // Update status to CANCELLED
-    event.status = EVENT_STATUS.CANCELLED;
-    await event.save();
+  // Update status to CANCELLED
+  event.status = EVENT_STATUS.CANCELLED;
+  await event.save();
 
-    // Trigger notifications (mock or real if service exists)
-    logger.info(`📢 Event ${event.title} has been cancelled. Notifications triggered for ${event.bookingsCount} attendees.`);
-    
-    // Log audit
-    await logAudit(req, 'CANCEL_EVENT', 'Event', event._id, { title: event.title });
+  // Trigger notifications (mock or real if service exists)
+  logger.info(
+    `📢 Event ${event.title} has been cancelled. Notifications triggered for ${event.bookingsCount} attendees.`
+  );
 
-    res.status(200).json({
-        success: true,
-        message: 'Event cancelled successfully. Attendees will be notified.',
-        data: event
-    });
+  // Log audit
+  await logAudit(req, 'CANCEL_EVENT', 'Event', event._id, {
+    title: event.title,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Event cancelled successfully. Attendees will be notified.',
+    data: event,
+  });
 };

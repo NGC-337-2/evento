@@ -23,7 +23,8 @@ const errorHandler = (err, req, res, next) => {
   });
 
   // Default fallback
-  let statusCode = err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
+  let statusCode =
+    err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
   let message = err.message || 'Internal Server Error';
 
   // 📦 Mongoose: Invalid ObjectId format
@@ -42,7 +43,9 @@ const errorHandler = (err, req, res, next) => {
   // 📦 Mongoose: Schema validation failed
   if (err.name === 'ValidationError') {
     statusCode = 400;
-    message = Object.values(err.errors).map(e => e.message).join(', ');
+    message = Object.values(err.errors)
+      .map((e) => e.message)
+      .join(', ');
   }
 
   // 🔑 JWT: Invalid or malformed token

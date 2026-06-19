@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const logger = require('./logger');
 
 const MAX_RETRIES = parseInt(process.env.MONGO_MAX_RETRIES) || 5;
-const INITIAL_RETRY_DELAY_MS = parseInt(process.env.MONGO_RETRY_DELAY_MS) || 2000;
+const INITIAL_RETRY_DELAY_MS =
+  parseInt(process.env.MONGO_RETRY_DELAY_MS) || 2000;
 
 let retries = 0;
 let isShuttingDown = false;
@@ -11,7 +12,9 @@ let isShuttingDown = false;
 // 🔧 Setup connection event listeners (called once at module load)
 const setupConnectionEvents = () => {
   mongoose.connection.on('connected', () => {
-    logger.info(`✅ MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`);
+    logger.info(
+      `✅ MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`
+    );
   });
 
   mongoose.connection.on('disconnected', () => {
@@ -46,12 +49,16 @@ const connectDB = async () => {
       socketTimeoutMS: 45000,
     });
 
-    logger.info(`🔗 Successfully connected to MongoDB: ${conn.connection.host}/${conn.connection.name}`);
+    logger.info(
+      `🔗 Successfully connected to MongoDB: ${conn.connection.host}/${conn.connection.name}`
+    );
     retries = 0;
     return conn.connection;
   } catch (error) {
     retries++;
-    logger.error(`❌ MongoDB connection failed [${error.name}] (attempt ${retries}/${MAX_RETRIES}): ${error.message}`);
+    logger.error(
+      `❌ MongoDB connection failed [${error.name}] (attempt ${retries}/${MAX_RETRIES}): ${error.message}`
+    );
 
     if (retries < MAX_RETRIES) {
       const delay = getRetryDelay(retries);

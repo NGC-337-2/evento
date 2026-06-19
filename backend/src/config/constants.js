@@ -44,10 +44,11 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
-  BASE_API_URL: process.env.NODE_ENV === 'production'
-    ? process.env.PROD_API_URL
-    : `http://localhost:${process.env.PORT || 5000}`,
-  
+  BASE_API_URL:
+    process.env.NODE_ENV === 'production'
+      ? process.env.PROD_API_URL
+      : `http://localhost:${process.env.PORT || 5000}`,
+
   // 🌐 Email Templates/Subjects (placeholder structure)
   EMAIL_SUBJECTS: {
     WELCOME: 'Welcome to EventO!',

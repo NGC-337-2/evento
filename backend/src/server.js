@@ -7,7 +7,6 @@
 require('dotenv').config();
 require('express-async-errors');
 
-
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -35,10 +34,18 @@ const exportRoutes = require('./routes/exportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 // ─── Environment Validation ──────────────────────────────────────────────────
-const requiredEnvVars = ['NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'CLIENT_URL'];
+const requiredEnvVars = [
+  'NODE_ENV',
+  'PORT',
+  'MONGO_URI',
+  'JWT_SECRET',
+  'CLIENT_URL',
+];
 const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
 if (missingVars.length > 0) {
-  logger.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+  logger.error(
+    `❌ Missing required environment variables: ${missingVars.join(', ')}`
+  );
   process.exit(1);
 }
 
@@ -53,78 +60,97 @@ app.use((req, res, next) => {
 
   // Add request context to logger (if using Winston/Pino)
   if (logger.child) {
-    req.log = logger.child({ requestId: req.id, ip: req.ip, userAgent: req.get('user-agent') });
+    req.log = logger.child({
+      requestId: req.id,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    });
   }
   next();
 });
 
 // ─── Security Middleware ─────────────────────────────────────────────────────
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com'],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:', 'http:'],
-      connectSrc: ["'self'", 'https://api.stripe.com'],
-      frameSrc: ["'self'", 'https://js.stripe.com'],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:', 'http:'],
+        connectSrc: ["'self'", 'https://api.stripe.com'],
+        frameSrc: ["'self'", 'https://js.stripe.com'],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false, // Required for Stripe Elements
-}));
+    crossOriginEmbedderPolicy: false, // Required for Stripe Elements
+  })
+);
 
 // CORS with dynamic origin validation
 const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:3000',
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : []),
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      logger.warn(`🚫 CORS blocked: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-  exposedHeaders: ['X-Request-ID', 'X-Total-Count'],
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn(`🚫 CORS blocked: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    exposedHeaders: ['X-Request-ID', 'X-Total-Count'],
+  })
+);
 
 // HTTP Parameter Pollution protection
 app.use(hpp());
 
 // ─── Rate Limiting (Configurable per env) ────────────────────────────────────
-const createLimiter = (windowMs, max, message) => rateLimit({
-  windowMs,
-  max,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => req.headers['x-forwarded-for'] || req.ip,
-  handler: (req, res) => {
-    logger.warn(`⚠️ Rate limit exceeded: ${req.method} ${req.path} from ${req.ip}`);
-    res.status(429).json({ success: false, message });
-  },
-});
+const createLimiter = (windowMs, max, message) =>
+  rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.headers['x-forwarded-for'] || req.ip,
+    handler: (req, res) => {
+      logger.warn(
+        `⚠️ Rate limit exceeded: ${req.method} ${req.path} from ${req.ip}`
+      );
+      res.status(429).json({ success: false, message });
+    },
+  });
 
 // Global API limiter
-app.use('/api', createLimiter(
-  15 * 60 * 1000,
-  parseInt(process.env.RATE_LIMIT_GLOBAL_MAX) || 100,
-  'Too many requests, please try again later.'
-));
+app.use(
+  '/api',
+  createLimiter(
+    15 * 60 * 1000,
+    parseInt(process.env.RATE_LIMIT_GLOBAL_MAX) || 100,
+    'Too many requests, please try again later.'
+  )
+);
 
 // Auth-specific stricter limiter
-app.use('/api/v1/auth', createLimiter(
-  15 * 60 * 1000,
-  parseInt(process.env.RATE_LIMIT_AUTH_MAX) || 20,
-  'Too many auth attempts, please try again later.'
-));
+app.use(
+  '/api/v1/auth',
+  createLimiter(
+    15 * 60 * 1000,
+    parseInt(process.env.RATE_LIMIT_AUTH_MAX) || 20,
+    'Too many auth attempts, please try again later.'
+  )
+);
 
 // ─── Stripe Webhook (MUST be before body parsers) ────────────────────────────
 const { stripeWebhook } = require('./controllers/bookingController');
@@ -133,7 +159,7 @@ app.post(
   express.raw({ type: 'application/json' }),
   (req, res, next) => {
     req.log?.info('📦 Stripe webhook received', {
-      signature: req.headers['stripe-signature']?.substring(0, 20) + '...'
+      signature: req.headers['stripe-signature']?.substring(0, 20) + '...',
     });
     next();
   },
@@ -141,17 +167,20 @@ app.post(
 );
 
 // ─── Body Parsing & Sanitization ─────────────────────────────────────────────
-app.use(express.json({
-  limit: process.env.MAX_UPLOAD_SIZE || '10kb',
-  strict: true
-}));
-app.use(express.urlencoded({
-  extended: true,
-  limit: process.env.MAX_UPLOAD_SIZE || '10kb'
-}));
+app.use(
+  express.json({
+    limit: process.env.MAX_UPLOAD_SIZE || '10kb',
+    strict: true,
+  })
+);
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: process.env.MAX_UPLOAD_SIZE || '10kb',
+  })
+);
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(mongoSanitize({ replaceWith: '_' }));
-
 
 // ─── Performance & Reliability ───────────────────────────────────────────────
 app.use(compression({ level: 6, threshold: '1kb' }));
@@ -171,21 +200,28 @@ app.use((req, res, next) => {
 if (process.env.NODE_ENV === 'development') {
   // Enhanced morgan format with request ID
   morgan.token('id', (req) => req.id);
-  app.use(morgan('[:id] :method :url :status :response-time ms - :res[content-length]', {
-    stream: { write: (message) => logger.http(message.trim()) }
-  }));
+  app.use(
+    morgan(
+      '[:id] :method :url :status :response-time ms - :res[content-length]',
+      {
+        stream: { write: (message) => logger.http(message.trim()) },
+      }
+    )
+  );
 } else {
   // Structured JSON logging for production
-  app.use(morgan('combined', {
-    stream: {
-      write: (message) => logger.info('HTTP Request', {
-        raw: message.trim(),
-        requestId: 'N/A' 
-      })
-    }
-  }));
+  app.use(
+    morgan('combined', {
+      stream: {
+        write: (message) =>
+          logger.info('HTTP Request', {
+            raw: message.trim(),
+            requestId: 'N/A',
+          }),
+      },
+    })
+  );
 }
-
 
 // ─── Enhanced Health Check ───────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
@@ -203,7 +239,9 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: {
-        status: ['disconnected', 'connected', 'connecting', 'disconnecting'][db.readyState],
+        status: ['disconnected', 'connected', 'connecting', 'disconnecting'][
+          db.readyState
+        ],
         host: db.host,
         name: db.name,
       },
@@ -250,12 +288,15 @@ const startServer = async () => {
     configureCloudinary();
 
     server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`🚀 EventO API server running in ${process.env.NODE_ENV} mode`, {
-        port: PORT,
-        pid: process.pid,
-        environment: process.env.NODE_ENV,
-        requestId: 'startup'
-      });
+      logger.info(
+        `🚀 EventO API server running in ${process.env.NODE_ENV} mode`,
+        {
+          port: PORT,
+          pid: process.pid,
+          environment: process.env.NODE_ENV,
+          requestId: 'startup',
+        }
+      );
     });
 
     // Handle server-level errors
@@ -265,7 +306,9 @@ const startServer = async () => {
 
     // Handle graceful shutdown
     const gracefulShutdown = async (signal) => {
-      logger.info(`🛑 ${signal} received. Starting graceful shutdown...`, { requestId: 'shutdown' });
+      logger.info(`🛑 ${signal} received. Starting graceful shutdown...`, {
+        requestId: 'shutdown',
+      });
 
       // Stop accepting new requests
       server.close((err) => {
@@ -304,7 +347,6 @@ const startServer = async () => {
       logger.error('💥 Uncaught Exception', error);
       gracefulShutdown('UNCAUGHT_EXCEPTION');
     });
-
   } catch (error) {
     logger.error('❌ Failed to start server', error);
     process.exit(1);

@@ -2,81 +2,86 @@
 const mongoose = require('mongoose');
 const { BOOKING_STATUS } = require('../config/constants');
 
-const bookingSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'User reference is required']
-  },
-  event: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Event',
-    required: [true, 'Event reference is required']
-  },
-  status: {
-    type: String,
-    enum: Object.values(BOOKING_STATUS),
-    default: BOOKING_STATUS.PENDING
-  },
-  quantity: {
-    type: Number,
-    required: [true, 'Ticket quantity is required'],
-    min: [1, 'Quantity must be at least 1']
-  },
-  tickets: [{
-    tierId: { type: mongoose.Schema.Types.ObjectId },
-    tierName: String,
-    quantity: { type: Number, required: true },
-    pricePerTicket: { type: Number, required: true }
-  }],
+const bookingSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User reference is required'],
+    },
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event',
+      required: [true, 'Event reference is required'],
+    },
+    status: {
+      type: String,
+      enum: Object.values(BOOKING_STATUS),
+      default: BOOKING_STATUS.PENDING,
+    },
+    quantity: {
+      type: Number,
+      required: [true, 'Ticket quantity is required'],
+      min: [1, 'Quantity must be at least 1'],
+    },
+    tickets: [
+      {
+        tierId: { type: mongoose.Schema.Types.ObjectId },
+        tierName: String,
+        quantity: { type: Number, required: true },
+        pricePerTicket: { type: Number, required: true },
+      },
+    ],
 
-  totalPrice: {
-    type: Number,
-    required: [true, 'Total price is required'],
-    min: [0, 'Price cannot be negative']
+    totalPrice: {
+      type: Number,
+      required: [true, 'Total price is required'],
+      min: [0, 'Price cannot be negative'],
+    },
+    currency: {
+      type: String,
+      default: 'USD',
+      uppercase: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'refunded'],
+      default: 'pending',
+    },
+    paymentIntentId: {
+      type: String, // Stripe Payment Intent ID
+      default: null,
+    },
+    ticketCodes: [String],
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Notes cannot exceed 500 characters'],
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    checkedIn: {
+      type: Boolean,
+      default: false,
+    },
+    checkedInAt: {
+      type: Date,
+      default: null,
+    },
   },
-  currency: {
-    type: String,
-    default: 'USD',
-    uppercase: true
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
-    default: 'pending'
-  },
-  paymentIntentId: {
-    type: String, // Stripe Payment Intent ID
-    default: null
-  },
-  ticketCodes: [String],
-  notes: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Notes cannot exceed 500 characters']
-  },
-  cancelledAt: {
-    type: Date,
-    default: null
-  },
-  cancelledBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
-  checkedIn: {
-    type: Boolean,
-    default: false
-  },
-  checkedInAt: {
-    type: Date,
-    default: null
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+);
 
 // 🔍 Indexes for query performance
 bookingSchema.index({ user: 1, event: 1 });
@@ -115,9 +120,12 @@ bookingSchema.pre('save', function (next) {
 
 // ✅ Method: Check if booking can be cancelled
 bookingSchema.methods.canBeCancelled = function () {
-  return [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED].includes(this.status) &&
-    this.paymentStatus === 'completed';
+  return (
+    [BOOKING_STATUS.PENDING, BOOKING_STATUS.CONFIRMED].includes(this.status) &&
+    this.paymentStatus === 'completed'
+  );
 };
 
-const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
+const Booking =
+  mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
 module.exports = Booking;

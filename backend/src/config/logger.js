@@ -36,19 +36,24 @@ const logger = winston.createLogger({
 });
 
 // Console logging is required for Docker to capture stdout
-logger.add(new winston.transports.Console({
-  format: process.env.NODE_ENV === 'production'
-    ? winston.format.combine(
-        winston.format.uncolorize(),
-        winston.format.json() // Use JSON in production for log aggregators
-      )
-    : winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
-          return `${timestamp} [${service}] ${level}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
-        })
-      ),
-}));
+logger.add(
+  new winston.transports.Console({
+    format:
+      process.env.NODE_ENV === 'production'
+        ? winston.format.combine(
+            winston.format.uncolorize(),
+            winston.format.json() // Use JSON in production for log aggregators
+          )
+        : winston.format.combine(
+            winston.format.colorize(),
+            winston.format.printf(
+              ({ timestamp, level, message, service, ...meta }) => {
+                return `${timestamp} [${service}] ${level}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+              }
+            )
+          ),
+  })
+);
 
 // Add http level for Morgan integration
 logger.http = (msg) => logger.log('http', msg);

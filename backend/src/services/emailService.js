@@ -4,11 +4,14 @@ const logger = require('../config/logger');
 
 // 🔧 Configure Nodemailer Transport
 const createTransporter = () => {
-  const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_SECURE } = process.env;
+  const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_SECURE } =
+    process.env;
 
   // Fallback for development if env vars are missing
   if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS) {
-    logger.warn('⚠️ SMTP credentials missing. Emails will be logged to console instead of sent.');
+    logger.warn(
+      '⚠️ SMTP credentials missing. Emails will be logged to console instead of sent.'
+    );
     return null;
   }
 
@@ -42,7 +45,11 @@ const sendEmail = async (options) => {
 
   // Dev mode: intercept & log
   if (!transporter) {
-    logger.info('📧 [DEV MODE] Email intercepted:', { to, subject, preview: text || 'HTML email' });
+    logger.info('📧 [DEV MODE] Email intercepted:', {
+      to,
+      subject,
+      preview: text || 'HTML email',
+    });
     return { success: true, messageId: 'dev-intercepted' };
   }
 
@@ -51,7 +58,11 @@ const sendEmail = async (options) => {
     logger.info(`✅ Email sent to ${to}: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    logger.error('❌ Failed to send email', { error: error.message, to, subject });
+    logger.error('❌ Failed to send email', {
+      error: error.message,
+      to,
+      subject,
+    });
     // Don't throw; allow request to succeed but log failure for monitoring
     return { success: false, messageId: null, error: error.message };
   }
@@ -88,7 +99,12 @@ exports.sendPasswordResetEmail = async (email, resetUrl) => {
 
 exports.sendBookingConfirmation = async (email, booking, event) => {
   const subject = 'Booking Confirmed ✅';
-  const ticketsHtml = booking.ticketCodes.map(code => `<li style="margin: 4px 0;"><code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">${code}</code></li>`).join('');
+  const ticketsHtml = booking.ticketCodes
+    .map(
+      (code) =>
+        `<li style="margin: 4px 0;"><code style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">${code}</code></li>`
+    )
+    .join('');
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #059669;">Booking Confirmed!</h2>

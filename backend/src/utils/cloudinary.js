@@ -5,8 +5,9 @@ const logger = require('../config/logger');
 
 // 🌐 Initialize Cloudinary configuration
 const configureCloudinary = () => {
-  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
-  
+  const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
+    process.env;
+
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     throw new Error('❌ Missing required Cloudinary environment variables');
   }
@@ -43,7 +44,9 @@ const uploadToCloudinary = (fileBuffer, folder = 'evento') => {
       {
         folder,
         resource_type: 'auto',
-        transformation: [{ width: 1280, height: 720, crop: 'limit', quality: 'auto' }],
+        transformation: [
+          { width: 1280, height: 720, crop: 'limit', quality: 'auto' },
+        ],
       },
       (error, result) => {
         if (error) {
@@ -58,4 +61,9 @@ const uploadToCloudinary = (fileBuffer, folder = 'evento') => {
   });
 };
 
-module.exports = { configureCloudinary, upload, uploadToCloudinary, cloudinary };
+module.exports = {
+  configureCloudinary,
+  upload,
+  uploadToCloudinary,
+  cloudinary,
+};
