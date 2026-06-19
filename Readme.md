@@ -193,23 +193,4 @@ EventO follows a **14-week, 5-phase** implementation plan:
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -m "feat: add your feature"`
-4. Push to branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-
-
-> Built with ❤️ by the EventO  | Last Updated: `{{CURRENT_DATE}}`
+=
